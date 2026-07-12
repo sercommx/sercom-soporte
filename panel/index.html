@@ -3,30 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SercomDesk — Panel de Soporte Centralizado</title>
+  <title>SercomDesk — Centro de Operaciones de TI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0b0f19;
-      --surface: #111827;
-      --surface-card: #1f2937;
-      --border: #374151;
+      --bg: #060913;
+      --surface: rgba(17, 24, 39, 0.7);
+      --surface-card: rgba(31, 41, 55, 0.4);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(0, 102, 204, 0.6);
       --accent: #0066cc;
-      --accent-hover: #0052a3;
+      --accent-glow: rgba(0, 102, 204, 0.35);
       --success: #10b981;
       --danger: #ef4444;
       --warning: #f59e0b;
       --text: #f9fafb;
       --text-muted: #9ca3af;
-      --radius: 12px;
+      --radius: 16px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #111a2e 0%, var(--bg) 70%);
       color: var(--text);
       height: 100vh;
       display: flex;
@@ -34,149 +35,189 @@
       overflow: hidden;
     }
 
-    /* --- LOGIN SCREEN --- */
+    /* --- LOGIN SCREEN (GLASSMORPHISM) --- */
     #login-screen {
       position: fixed;
       inset: 0;
-      background: var(--bg);
+      background: radial-gradient(circle at center, #111827 0%, #030712 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      transition: opacity 0.3s ease;
     }
 
     .login-card {
-      background: var(--surface);
+      background: rgba(17, 24, 39, 0.6);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-      width: 400px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      border-radius: 24px;
+      padding: 48px;
+      width: 440px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8), 0 0 100px rgba(0, 102, 204, 0.15);
       text-align: center;
     }
 
-    .login-card h2 {
-      font-size: 26px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-
-    .login-card h2 span { color: var(--success); }
-
-    .login-card p {
-      color: var(--text-muted);
-      font-size: 13px;
+    .login-logo {
+      height: 48px;
+      width: auto;
       margin-bottom: 24px;
     }
 
+    .login-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       text-align: left;
     }
 
     .form-group label {
       display: block;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
-      margin-bottom: 6px;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
     }
 
     .form-group input {
       width: 100%;
-      background: #182235;
+      background: rgba(15, 23, 42, 0.6);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 12px;
       color: var(--text);
       font-size: 14px;
-      padding: 10px 14px;
+      padding: 12px 16px;
       outline: none;
+      transition: all 0.2s;
     }
 
-    .form-group input:focus { border-color: var(--success); }
+    .form-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
 
     .btn-login {
       width: 100%;
-      background: var(--success);
+      background: var(--accent);
       border: none;
       color: #fff;
       font-weight: 600;
-      padding: 12px;
-      border-radius: var(--radius);
+      padding: 14px;
+      border-radius: 12px;
       cursor: pointer;
       font-size: 14px;
-      transition: background 0.2s;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px var(--accent-glow);
     }
 
-    .btn-login:hover { background: #059669; }
+    .btn-login:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 6px 24px rgba(0, 102, 204, 0.5);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
 
     #login-error {
       color: var(--danger);
-      font-size: 12px;
-      margin-top: 12px;
-      min-height: 18px;
+      font-size: 13px;
+      margin-top: 16px;
+      min-height: 20px;
     }
 
-    /* --- DASHBOARD LAYOUT --- */
+    /* --- DASHBOARD HEADER --- */
     #header {
-      background: var(--surface);
+      background: rgba(17, 24, 39, 0.85);
       border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
+      padding: 16px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      backdrop-filter: blur(10px);
       flex-shrink: 0;
     }
 
-    #header h1 {
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    #header h1 span { color: var(--success); }
-
-    #main-content {
-      flex: 1;
+    .header-brand {
       display: flex;
-      flex-direction: column;
-      padding: 24px;
-      overflow-y: auto;
+      align-items: center;
+      gap: 12px;
     }
 
-    /* --- CARDS GRID --- */
-    .grid-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 16px;
+    .header-logo {
+      height: 32px;
+      width: auto;
+    }
+
+    .header-badge {
+      background: rgba(0, 102, 204, 0.15);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    #agents-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
+    /* --- MAIN CONTENT LAYOUT --- */
+    #main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 32px;
+      overflow-y: auto;
     }
 
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    #agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    /* --- ENTERPRISE AGENT CARD --- */
     .agent-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      transition: transform 0.2s, border-color 0.2s;
+      gap: 16px;
+      transition: all 0.3s;
     }
 
     .agent-card:hover {
-      transform: translateY(-2px);
-      border-color: #4b5563;
+      border-color: var(--border-active);
+      box-shadow: 0 10px 30px rgba(0, 102, 204, 0.1);
     }
 
     .agent-card-header {
@@ -185,102 +226,127 @@
       justify-content: space-between;
     }
 
-    .agent-id {
-      font-size: 18px;
+    .agent-id-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
       font-weight: 700;
-      color: var(--text);
+      color: #fff;
     }
 
-    .agent-status {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 99px;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--success);
+    .pulse-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 12px var(--success);
+      animation: pulse 1.8s infinite;
     }
 
-    .agent-hostname {
-      font-size: 13px;
+    .agent-host {
+      font-size: 14px;
       color: var(--text-muted);
+      margin-top: -10px;
     }
 
-    .stats-container {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-    }
-
-    .stat-label { color: var(--text-muted); }
-    .stat-value { font-weight: 500; }
-
-    .card-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 6px;
-    }
-
-    .btn-card {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface-card);
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-card:hover {
+    .card-divider {
+      height: 1px;
       background: var(--border);
     }
 
-    .btn-card.primary {
+    .system-badge-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .sys-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-action:hover {
+      background: var(--border);
+      border-color: #4b5563;
+    }
+
+    .btn-action.primary {
       background: var(--accent);
       border-color: transparent;
+      box-shadow: 0 4px 15px var(--accent-glow);
     }
 
-    .btn-card.primary:hover {
+    .btn-action.primary:hover {
       background: var(--accent-hover);
+      box-shadow: 0 6px 20px rgba(0, 102, 204, 0.5);
     }
 
-    /* --- ACTIVE SESSION MODAL --- */
+    /* --- ACTIVE LIVE SESSION CONTROLLER (FULLSCREEN) --- */
     #session-view {
       display: none;
       position: fixed;
       inset: 0;
-      background: #000;
+      background: #03050a;
       z-index: 500;
-      flex-direction: column;
+      flex-direction: row;
     }
 
     #session-view.active { display: flex; }
 
-    #session-header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 20px;
+    #session-sidebar {
+      width: 380px;
+      background: rgba(17, 24, 39, 0.85);
+      border-right: 1px solid var(--border);
       display: flex;
-      align-items: center;
-      gap: 16px;
-      color: var(--text);
+      flex-direction: column;
+      backdrop-filter: blur(20px);
+      z-index: 600;
     }
 
-    #canvas-container {
+    #session-info-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #session-info-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .live-stream-area {
       flex: 1;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: #000;
       overflow: hidden;
-      position: relative;
     }
 
     #screen-canvas {
@@ -289,16 +355,85 @@
       object-fit: contain;
     }
 
-    #remote-cursor {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: rgba(16,185,129,0.9);
-      border: 2px solid #fff;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      display: none;
+    /* --- TI DIAGNOSTIC TOOLBOX --- */
+    .toolbox-section {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toolbox-section h3 {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .grid-tools {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .tool-card-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .tool-card-btn:hover {
+      background: rgba(0, 102, 204, 0.15);
+      border-color: var(--accent);
+    }
+
+    /* Terminal Console */
+    #console-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #080b12;
+      overflow: hidden;
+    }
+
+    #console-output {
+      flex: 1;
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #a5d6ff;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+
+    .con-log-sys { color: var(--text-muted); font-style: italic; }
+    .con-log-cmd { color: #58a6ff; font-weight: bold; }
+    .con-log-out { color: #7ee787; }
+    .con-log-err { color: var(--danger); }
+
+    #console-input-bar {
+      display: flex;
+      border-top: 1px solid var(--border);
+      background: rgba(17, 24, 39, 0.9);
+    }
+
+    #console-input-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 16px;
+      outline: none;
     }
   </style>
 </head>
@@ -307,83 +442,100 @@
 <!-- PANTALLA DE LOGIN -->
 <div id="login-screen">
   <div class="login-card">
+    <img class="login-logo" src="/soporte/download/favicon" alt="Sercom Mx Logo" onerror="this.src='https://sercommx.com/favicon.ico'" />
     <h2>Sercom<span>Desk</span></h2>
-    <p>Panel de Control y Soporte Remoto</p>
+    <p>Centro de Operaciones y Soporte de TI</p>
     <div class="form-group">
-      <label>Usuario</label>
-      <input type="text" id="login-user" placeholder="Usuario" />
+      <label>Usuario Autorizado</label>
+      <input type="text" id="login-user" placeholder="Ingresa tu usuario" />
     </div>
     <div class="form-group">
-      <label>Contraseña</label>
+      <label>Contraseña de Red</label>
       <input type="password" id="login-pass" placeholder="••••••••" />
     </div>
     <!-- Cloudflare Turnstile -->
-    <div style="display: flex; justify-content: center; padding: 10px 0;">
+    <div style="display: flex; justify-content: center; padding: 12px 0;">
       <div class="cf-turnstile" data-sitekey="0x4AAAAAACGkJx3Djb7AtUCr" data-theme="dark" data-callback="onTurnstileSuccess"></div>
     </div>
-    <button class="btn-login" id="btn-login-submit" onclick="attemptLogin()" disabled>Entrar al Panel</button>
+    <button class="btn-login" id="btn-login-submit" onclick="attemptLogin()" disabled>Autenticar Credenciales</button>
     <div id="login-error"></div>
   </div>
 </div>
 
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<script>
-  let turnstileToken = null;
-  window.onTurnstileSuccess = function(token) {
-    turnstileToken = token;
-    document.getElementById('btn-login-submit').disabled = false;
-  };
-</script>
-
 <!-- CABECERA -->
 <div id="header">
-  <h1>Sercom<span>Desk</span> · Panel General</h1>
-  <button class="btn-card" style="max-width: 120px;" onclick="logout()">Cerrar Sesión</button>
+  <div class="header-brand">
+    <img class="header-logo" src="/soporte/download/favicon" alt="Sercom Mx" onerror="this.src='https://sercommx.com/favicon.ico'" />
+    <span class="header-badge">SaaS TI Enterprise</span>
+  </div>
+  <button class="btn-action" style="max-width: 140px;" onclick="logout()">Desconectar</button>
 </div>
 
 <!-- CONTENIDO PRINCIPAL -->
 <div id="main-content">
-  <div class="grid-title">Clientes Conectados en Tiempo Real</div>
+  <div class="section-title">Equipos de Clientes Monitoreados</div>
   <div id="agents-grid">
     <!-- Renderizado Dinámico -->
   </div>
 </div>
 
-<!-- VISUALIZADOR DE SESIÓN EN VIVO -->
+<!-- LIVE SESSION VIEW -->
 <div id="session-view">
-  <div id="session-header">
-    <strong id="session-title">Control Remoto: ----</strong>
-    <button class="btn-card" style="max-width: 150px; margin-left: auto;" onclick="startStream()">Iniciar Streaming</button>
-    <button class="btn-card" style="max-width: 150px;" onclick="requestElevation()">Solicitar Admin</button>
-    <button class="btn-card primary" style="max-width: 120px;" onclick="closeSession()">Salir</button>
+  <div id="session-sidebar">
+    <div id="session-info-header">
+      <h2 id="session-title">Consola de Control</h2>
+      <span class="agent-status" style="background: rgba(16, 185, 129, 0.15); color: var(--success); font-size: 11px; padding: 3px 8px; border-radius: 99px;">Transmisión Cifrada</span>
+    </div>
+
+    <!-- CAJA DE HERRAMIENTAS DE TI -->
+    <div class="toolbox-section">
+      <h3>🛠️ Caja de Herramientas de TI</h3>
+      <div class="grid-tools">
+        <button class="tool-card-btn" onclick="startStream()">🖥️ Ver Pantalla</button>
+        <button class="tool-card-btn" onclick="requestElevation()">🛡️ Solicitar Admin</button>
+        <button class="tool-card-btn" onclick="runDiagnosticCmd('Get-Process')">📊 Ver Procesos</button>
+        <button class="tool-card-btn" onclick="runDiagnosticCmd('Get-Service')">⚙️ Ver Servicios</button>
+        <button class="tool-card-btn" onclick="runDiagnosticCmd('Clear-RecycleBin -Force')">🧹 Limpiar Temp</button>
+        <button class="tool-card-btn" onclick="closeSession()">✕ Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- CONSOLA POWERSHELL -->
+    <div id="console-wrap">
+      <div id="console-output"></div>
+      <div id="console-input-bar">
+        <input type="text" id="console-input" placeholder="Escribe comando PowerShell y presiona Enter..." />
+      </div>
+    </div>
   </div>
-  <div id="canvas-container">
+
+  <div class="live-stream-area">
     <canvas id="screen-canvas"></canvas>
     <div id="remote-cursor"></div>
   </div>
 </div>
 
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
   let authenticated = false;
+  let turnstileToken = null;
   let activeWs = null;
   let currentAgentId = null;
   const WS_RELAY_URL = 'ws://129.159.72.206:6002';
 
   const canvas = document.getElementById('screen-canvas');
   const ctx = canvas.getContext('2d');
-  const remoteCursor = document.getElementById('remote-cursor');
+
+  window.onTurnstileSuccess = function(token) {
+    turnstileToken = token;
+    document.getElementById('btn-login-submit').disabled = false;
+  };
 
   function attemptLogin() {
     const u = document.getElementById('login-user').value;
     const p = document.getElementById('login-pass').value;
     const errEl = document.getElementById('login-error');
-    errEl.textContent = '';
-
-    if (!turnstileToken) {
-      errEl.textContent = 'Por favor, completa el reto de Cloudflare Turnstile';
-      return;
-    }
-
+    
     fetch('/soporte/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -396,18 +548,10 @@
         document.getElementById('login-screen').style.display = 'none';
         startMonitoring();
       } else {
-        errEl.textContent = data.error || 'Credenciales inválidas';
-        if (window.turnstile) turnstile.reset();
-        turnstileToken = null;
-        document.getElementById('btn-login-submit').disabled = true;
+        errEl.textContent = data.error || 'Credenciales incorrectas';
       }
     })
-    .catch(err => {
-      errEl.textContent = 'Error de red al intentar iniciar sesión';
-      if (window.turnstile) turnstile.reset();
-      turnstileToken = null;
-      document.getElementById('btn-login-submit').disabled = true;
-    });
+    .catch(() => { errEl.textContent = 'Error de conexión con el servidor'; });
   }
 
   function logout() {
@@ -421,9 +565,7 @@
       const res = await fetch('/soporte/agentes');
       const agents = await res.json();
       renderGrid(agents);
-    } catch (e) {
-      console.error('Error al actualizar agentes', e);
-    }
+    } catch {}
   }
 
   function renderGrid(agents) {
@@ -431,60 +573,37 @@
     grid.innerHTML = '';
     
     if (Object.keys(agents).length === 0) {
-      grid.innerHTML = '<div style="color:var(--text-muted); font-size: 13px;">No hay clientes conectados actualmente.</div>';
+      grid.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">Buscando agentes activos en la red de soporte...</div>';
       return;
     }
 
     for (const [id, info] of Object.entries(agents)) {
-      const h = info.health || {};
-      const cpu = h.cpu ? h.cpu.load + '%' : '—';
-      const freeRam = h.os ? h.os.freeRam + ' GB' : '—';
-      const os = h.os ? h.os.name.substring(0, 24) : 'Windows';
-
       const card = document.createElement('div');
       card.className = 'agent-card';
       card.innerHTML = `
         <div class="agent-card-header">
-          <span class="agent-id">${id}</span>
-          <span class="agent-status">En Línea</span>
+          <span class="agent-id-tag">${id}</span>
+          <div class="pulse-indicator"></div>
         </div>
-        <div class="agent-hostname">${info.hostname || 'Desconocido'}</div>
-        <div class="stats-container">
-          <div class="stat-row"><span class="stat-label">S.O.</span><span class="stat-value">${os}</span></div>
-          <div class="stat-row"><span class="stat-label">Uso CPU</span><span class="stat-value">${cpu}</span></div>
-          <div class="stat-row"><span class="stat-label">RAM Libre</span><span class="stat-value">${freeRam}</span></div>
+        <div class="agent-host">${info.hostname || 'Terminal Desconectada'}</div>
+        <div class="card-divider"></div>
+        <div class="system-badge-row">
+          <span class="sys-badge">OS: Windows</span>
+          <span class="sys-badge">HTTPS</span>
         </div>
         <div class="card-actions">
-          <button class="btn-card" onclick="sendQuickCmd('${id}')">Enviar Cmd</button>
-          <button class="btn-card primary" onclick="takeControl('${id}')">Tomar Control</button>
+          <button class="btn-action primary" onclick="takeControl('${id}')">🖥️ Control Remoto</button>
         </div>
       `;
       grid.appendChild(card);
     }
   }
 
-  function sendQuickCmd(id) {
-    const cmd = prompt('Ingresa el comando de PowerShell a ejecutar en el cliente:');
-    if (!cmd) return;
-    fetch('/soporte/cmd', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
-      },
-      body: JSON.stringify({ id, cmd })
-    })
-    .then(r => r.json())
-    .then(data => alert('Resultado:\n' + (data.output || data.error)))
-    .catch(err => alert('Error: ' + err.message));
-  }
-
   function takeControl(id) {
     currentAgentId = id;
-    document.getElementById('session-title').textContent = `Control Remoto Activo: ${id}`;
+    document.getElementById('session-title').textContent = `Consola: ${id}`;
     document.getElementById('session-view').classList.add('active');
-
-    // Conectar WebSocket
+    
     const wsUrl = `${WS_RELAY_URL}?type=panel&id=${id}&panel_key=SrC0mS0p0rt3#S3cur1tyKey#2026`;
     activeWs = new WebSocket(wsUrl);
 
@@ -511,11 +630,22 @@
 
   function requestElevation() {
     const uacCmd = `Start-Process powershell -Verb runas`;
+    runDiagnosticCmd(uacCmd);
+  }
+
+  function runDiagnosticCmd(cmd) {
+    log('cmd', `PS> ${cmd}`);
     fetch('/soporte/cmd', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026' },
-      body: JSON.stringify({ id: currentAgentId, cmd: uacCmd })
-    });
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+      },
+      body: JSON.stringify({ id: currentAgentId, cmd })
+    })
+    .then(r => r.json())
+    .then(data => log('out', data.output || data.error))
+    .catch(() => log('err', 'Fallo al comunicar con la terminal remota'));
   }
 
   function closeSession() {
@@ -525,6 +655,25 @@
     }
     document.getElementById('session-view').classList.remove('active');
   }
+
+  function log(type, text) {
+    const out = document.getElementById('console-output');
+    const el = document.createElement('div');
+    el.className = `con-log-${type}`;
+    el.textContent = text;
+    out.appendChild(el);
+    out.scrollTop = out.scrollHeight;
+  }
+
+  document.getElementById('console-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const val = e.target.value;
+      if (val) {
+        runDiagnosticCmd(val);
+        e.target.value = '';
+      }
+    }
+  });
 
   function startMonitoring() {
     fetchAgents();
