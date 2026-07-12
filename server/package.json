@@ -1,0 +1,19 @@
+{
+  "name": "sercom-soporte-server",
+  "version": "2.0.0",
+  "description": "SercomDesk - Servidor de soporte remoto y relay WebSocket",
+  "type": "module",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js",
+    "dev": "node --watch relay.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Sercom Mx",
+  "license": "UNLICENSED"
+}

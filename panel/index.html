@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SercomDesk — Panel de Soporte Técnico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0f1e;
+      --surface: #111827;
+      --surface2: #1f2937;
+      --border: #374151;
+      --accent: #10b981;
+      --accent-dark: #059669;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --blue: #3b82f6;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    #header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    #header h1 span { color: var(--accent); }
+
+    .header-badges {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .badge.connected { background: rgba(16,185,129,0.15); border-color: var(--accent); color: var(--accent); }
+    .badge.disconnected { background: rgba(239,68,68,0.15); border-color: var(--danger); color: var(--danger); }
+    .badge.streaming { background: rgba(59,130,246,0.15); border-color: var(--blue); color: var(--blue); animation: pulse 2s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+    /* ── Login Screen ── */
+    #login-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 420px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    }
+
+    .login-card .logo {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .login-card .logo span { color: var(--accent); }
+
+    .login-card .subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus { border-color: var(--accent); }
+
+    .form-group input::placeholder { color: var(--text-muted); }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 8px;
+    }
+
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #login-error {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--danger);
+      text-align: center;
+      min-height: 18px;
+    }
+
+    /* ── Main Workspace (hidden until connected) ── */
+    #workspace {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #workspace.active { display: flex; }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .tool-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .tool-btn:hover { background: var(--border); }
+    .tool-btn.active { background: rgba(16,185,129,0.15); border-color: var(--accent); color: var(--accent); }
+    .tool-btn.danger { border-color: transparent; }
+    .tool-btn.danger:hover { background: rgba(239,68,68,0.15); border-color: var(--danger); color: var(--danger); }
+
+    .tool-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+    .tool-info {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ── Main Layout: Canvas + Sidebar ── */
+    #main-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Screen Canvas Area ── */
+    #canvas-area {
+      flex: 1;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      cursor: none;
+    }
+
+    #canvas-area.interactive { cursor: none; }
+    #canvas-area.observe { cursor: default; }
+
+    #screen-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    #canvas-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10,15,30,0.85);
+      backdrop-filter: blur(8px);
+    }
+
+    .canvas-overlay-msg {
+      text-align: center;
+    }
+
+    .canvas-overlay-msg .icon { font-size: 48px; margin-bottom: 16px; }
+
+    .canvas-overlay-msg h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .canvas-overlay-msg p {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Remote cursor */
+    #remote-cursor {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(16,185,129,0.9);
+      border: 2px solid #fff;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      transition: left 0.05s, top 0.05s;
+      display: none;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 280px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-section h3 {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 12px;
+    }
+
+    /* Client info */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .info-row .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+
+    .info-row .value {
+      font-size: 11px;
+      font-weight: 500;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    /* Health bars */
+    .health-bar-wrap { margin-bottom: 8px; }
+    .health-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+    .health-bar-label span:first-child { color: var(--text-muted); }
+
+    .health-bar {
+      height: 5px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width 0.5s;
+    }
+
+    .health-bar-fill.warn { background: var(--warning); }
+    .health-bar-fill.danger { background: var(--danger); }
+
+    /* Console */
+    #console-output {
+      flex: 1;
+      overflow-y: auto;
+      background: #0d1117;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 10px;
+      line-height: 1.5;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .console-line { color: #58a6ff; margin-bottom: 2px; }
+    .console-line.output { color: #7ee787; }
+    .console-line.error { color: #f97583; }
+    .console-line.system { color: var(--text-muted); font-style: italic; }
+
+    #console-input-row {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #console-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 6px 10px;
+      outline: none;
+    }
+
+    #console-input:focus { border-color: var(--accent); }
+
+    #console-send {
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px 12px;
+    }
+
+    #console-send:hover { background: var(--accent-dark); }
+
+    /* Clipboard section */
+    #clipboard-area {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    #clipboard-text {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      min-height: 60px;
+      padding: 8px 10px;
+      resize: vertical;
+      outline: none;
+    }
+
+    #clipboard-text:focus { border-color: var(--accent); }
+
+    .clipboard-btns { display: flex; gap: 6px; }
+
+    .btn-sm {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 6px 8px;
+      transition: all 0.15s;
+    }
+
+    .btn-sm:hover { background: var(--border); }
+    .btn-sm.accent { background: rgba(16,185,129,0.15); border-color: var(--accent); color: var(--accent); }
+    .btn-sm.accent:hover { background: rgba(16,185,129,0.25); }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+<div id="header">
+  <h1>Sercom<span>Desk</span> &nbsp;·&nbsp; Panel de Control</h1>
+  <div class="header-badges">
+    <span class="badge" id="badge-relay">🔴 Desconectado</span>
+    <span class="badge" id="badge-agent" style="display:none">⚫ Agente</span>
+    <span class="badge" id="badge-stream" style="display:none">📡 Streaming</span>
+  </div>
+</div>
+
+<!-- ══ LOGIN SCREEN ════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">Sercom<span>Desk</span></div>
+    <p class="subtitle">Panel de Soporte Técnico Remoto</p>
+
+    <div class="form-group">
+      <label>ID del Cliente (formato XXXX-XXXX)</label>
+      <input type="text" id="input-id" placeholder="Ej: 9809-4887" maxlength="9" />
+    </div>
+
+    <div class="form-group">
+      <label>Clave de Acceso del Panel</label>
+      <input type="password" id="input-key" placeholder="Clave de API" />
+    </div>
+
+    <button class="btn-primary" id="btn-connect" onclick="connectPanel()">
+      Conectar al Cliente
+    </button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══ WORKSPACE ═══════════════════════════════════════════════════════════ -->
+<div id="workspace">
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button class="tool-btn" id="btn-start-stream" onclick="startStream()">
+      🖥 Iniciar Vista Remota
+    </button>
+    <button class="tool-btn active" id="btn-control-toggle" onclick="toggleControl()" style="display:none">
+      🖱 Control Activo
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="requestClipboardFromAgent()">
+      📋 Obtener Portapapeles
+    </button>
+    <button class="tool-btn" onclick="requestElevation()">
+      🛡 Solicitar Admin
+    </button>
+    <button class="tool-btn danger" onclick="disconnectPanel()">
+      ✕ Desconectar
+    </button>
+    <span class="tool-info" id="tool-info">Modo: Solo consola</span>
+  </div>
+
+  <!-- Main Layout -->
+  <div id="main-layout">
+
+    <!-- Canvas Area -->
+    <div id="canvas-area" class="observe">
+      <canvas id="screen-canvas"></canvas>
+      <div id="remote-cursor"></div>
+
+      <div id="canvas-overlay">
+        <div class="canvas-overlay-msg">
+          <div class="icon">🖥</div>
+          <h2>Escritorio no compartido</h2>
+          <p>Presiona "Iniciar Vista Remota" para activar el streaming de pantalla.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+
+      <!-- Client Info -->
+      <div class="sidebar-section">
+        <h3>🖥 Cliente Conectado</h3>
+        <div class="info-row">
+          <span class="label">ID</span>
+          <span class="value" id="info-id">—</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Hostname</span>
+          <span class="value" id="info-hostname">—</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Sistema</span>
+          <span class="value" id="info-os">—</span>
+        </div>
+        <div class="info-row">
+          <span class="label">CPU</span>
+          <span class="value" id="info-cpu">—</span>
+        </div>
+      </div>
+
+      <!-- Health -->
+      <div class="sidebar-section">
+        <h3>📊 Salud del Sistema</h3>
+        <div class="health-bar-wrap">
+          <div class="health-bar-label">
+            <span>CPU</span><span id="hb-cpu-val">—</span>
+          </div>
+          <div class="health-bar"><div class="health-bar-fill" id="hb-cpu" style="width:0%"></div></div>
+        </div>
+        <div class="health-bar-wrap">
+          <div class="health-bar-label">
+            <span>RAM Libre</span><span id="hb-ram-val">—</span>
+          </div>
+          <div class="health-bar"><div class="health-bar-fill" id="hb-ram" style="width:0%"></div></div>
+        </div>
+        <div class="info-row" style="margin-top:8px">
+          <span class="label">Batería</span>
+          <span class="value" id="info-battery">—</span>
+        </div>
+      </div>
+
+      <!-- Discos -->
+      <div class="sidebar-section">
+        <h3>💾 Discos</h3>
+        <div id="info-disks" style="font-size:11px;color:var(--text-muted)">—</div>
+      </div>
+
+      <!-- Clipboard -->
+      <div class="sidebar-section">
+        <h3>📋 Portapapeles</h3>
+        <div id="clipboard-area">
+          <textarea id="clipboard-text" placeholder="Texto del portapapeles..."></textarea>
+          <div class="clipboard-btns">
+            <button class="btn-sm accent" onclick="sendClipboardToAgent()">→ Enviar al cliente</button>
+            <button class="btn-sm" onclick="copyLocalClipboard()">📋 Copiar aquí</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Console (fills remaining space) -->
+      <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;border-top:1px solid var(--border)">
+        <div style="padding:10px 16px 0;flex-shrink:0">
+          <h3 style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.7px">💻 Consola PowerShell</h3>
+        </div>
+        <div id="console-output"></div>
+        <div id="console-input-row">
+          <input type="text" id="console-input" placeholder="Get-Process | Select-Object -First 5" />
+          <button id="console-send" onclick="sendConsoleCommand()">▶</button>
+        </div>
+      </div>
+
+    </div><!-- /sidebar -->
+  </div><!-- /main-layout -->
+</div><!-- /workspace -->
+
+<script>
+// ===========================================================================
+//  SercomDesk — Panel de Control JavaScript
+// ===========================================================================
+
+const WS_RELAY_URL = 'ws://129.159.72.206:6002';
+const API_URL = 'http://129.159.72.206:6001';
+
+let ws = null;
+let clientId = null;
+let panelKey = null;
+let isControlling = false;
+let isStreaming = false;
+let streamW = 0, streamH = 0;
+let pendingCmds = {};
+
+// --- Canvas ---
+const canvas = document.getElementById('screen-canvas');
+const ctx = canvas.getContext('2d');
+const canvasArea = document.getElementById('canvas-area');
+const canvasOverlay = document.getElementById('canvas-overlay');
+const remoteCursor = document.getElementById('remote-cursor');
+
+// ===========================================================================
+//  Conexión al Panel
+// ===========================================================================
+function connectPanel() {
+  const idInput = document.getElementById('input-id').value.trim();
+  const keyInput = document.getElementById('input-key').value.trim();
+
+  if (!idInput.match(/^\d{4}-\d{4}$/)) {
+    setLoginError('El ID debe tener el formato XXXX-XXXX (ej: 9809-4887)');
+    return;
+  }
+  if (!keyInput) {
+    setLoginError('Debes ingresar la clave de acceso del panel');
+    return;
+  }
+
+  clientId = idInput;
+  panelKey = keyInput;
+
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true;
+  btn.textContent = 'Conectando...';
+  setLoginError('');
+
+  const wsUrl = `${WS_RELAY_URL}?type=panel&id=${encodeURIComponent(clientId)}&panel_key=${encodeURIComponent(panelKey)}`;
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    setBadge('relay', '🟢 Relay OK', 'connected');
+    log('system', `Conectado al relay SercomDesk`);
+  };
+
+  ws.onmessage = (e) => handleRelayMessage(e.data);
+
+  ws.onerror = () => {
+    setLoginError('Error de conexión. Verifica que el servidor relay esté activo.');
+    btn.disabled = false;
+    btn.textContent = 'Conectar al Cliente';
+    setBadge('relay', '🔴 Desconectado', 'disconnected');
+  };
+
+  ws.onclose = (e) => {
+    if (e.code === 4401) {
+      setLoginError('Clave de acceso incorrecta o no autorizada.');
+      btn.disabled = false;
+      btn.textContent = 'Conectar al Cliente';
+      return;
+    }
+    setBadge('relay', '🔴 Desconectado', 'disconnected');
+    if (isStreaming) stopStream();
+    log('system', 'Desconectado del relay.');
+  };
+}
+
+// ===========================================================================
+//  Manejo de mensajes desde el Relay WebSocket
+// ===========================================================================
+function handleRelayMessage(raw) {
+  let msg;
+  try { msg = JSON.parse(raw); } catch { return; }
+
+  switch (msg.type) {
+    case 'connected':
+      onAgentConnected(msg);
+      break;
+    case 'agent_offline':
+      setLoginError(`El agente ${clientId} no está conectado al servidor.`);
+      document.getElementById('btn-connect').disabled = false;
+      document.getElementById('btn-connect').textContent = 'Conectar al Cliente';
+      ws.close();
+      break;
+    case 'agent_disconnected':
+      setBadge('agent', '🔴 Agente Offline', 'disconnected');
+      log('system', '⚠️ El agente del cliente se desconectó.');
+      if (isStreaming) stopStream();
+      break;
+    case 'frame':
+      renderFrame(msg);
+      break;
+    case 'clipboard':
+      document.getElementById('clipboard-text').value = msg.text || '';
+      log('system', '📋 Portapapeles del cliente recibido.');
+      break;
+    case 'cmd_response':
+      handleCmdResponse(msg);
+      break;
+  }
+}
+
+function onAgentConnected(msg) {
+  // Mostrar workspace
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('workspace').classList.add('active');
+
+  setBadge('agent', `✅ ${clientId}`, 'connected');
+  document.getElementById('badge-agent').style.display = '';
+
+  document.getElementById('info-id').textContent = clientId;
+
+  // Cargar health del agente via API
+  fetchAgentHealth();
+
+  log('system', `✅ Agente ${clientId} conectado. Listo para soporte.`);
+  document.getElementById('btn-connect').disabled = false;
+  document.getElementById('btn-connect').textContent = 'Conectar al Cliente';
+}
+
+// ===========================================================================
+//  Streaming de Pantalla
+// ===========================================================================
+function startStream() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: 'start_stream' }));
+  isStreaming = true;
+
+  setBadge('stream', '📡 Streaming', 'streaming');
+  document.getElementById('badge-stream').style.display = '';
+  document.getElementById('btn-start-stream').style.display = 'none';
+  document.getElementById('btn-control-toggle').style.display = '';
+  document.getElementById('tool-info').textContent = 'Modo: Observación';
+  canvasOverlay.style.display = 'none';
+  canvasArea.classList.add('observe');
+  log('system', '📡 Transmisión de pantalla iniciada.');
+}
+
+function stopStream() {
+  if (ws && ws.readyState === WebSocket.OPEN)
+    ws.send(JSON.stringify({ type: 'stop_stream' }));
+  isStreaming = false;
+  isControlling = false;
+  updateControlUI(false);
+  setBadge('stream', '', '');
+  document.getElementById('badge-stream').style.display = 'none';
+  document.getElementById('btn-start-stream').style.display = '';
+  document.getElementById('btn-control-toggle').style.display = 'none';
+  document.getElementById('tool-info').textContent = 'Modo: Solo consola';
+  canvasOverlay.style.display = 'flex';
+}
+
+function renderFrame(msg) {
+  const img = new Image();
+  img.onload = () => {
+    // Inicializar canvas con dimensiones reales del cliente
+    if (canvas.width !== msg.sw || canvas.height !== msg.sh) {
+      canvas.width = msg.sw;
+      canvas.height = msg.sh;
+      streamW = msg.sw;
+      streamH = msg.sh;
+    }
+    ctx.drawImage(img, msg.x, msg.y, msg.cellW, msg.cellH);
+    URL.revokeObjectURL(img.src);
+  };
+
+  // Convertir base64 a blob para eficiencia
+  const binary = atob(msg.data);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+  const blob = new Blob([arr], { type: 'image/jpeg' });
+  img.src = URL.createObjectURL(blob);
+}
+
+// ===========================================================================
+//  Control Remoto (Mouse / Teclado)
+// ===========================================================================
+function toggleControl() {
+  isControlling = !isControlling;
+  updateControlUI(isControlling);
+}
+
+function updateControlUI(active) {
+  const btn = document.getElementById('btn-control-toggle');
+  if (active) {
+    btn.textContent = '🖱 Control Activo';
+    btn.classList.add('active');
+    canvasArea.classList.remove('observe');
+    canvasArea.classList.add('interactive');
+    document.getElementById('tool-info').textContent = 'Modo: Control Total';
+    remoteCursor.style.display = 'block';
+    attachCanvasEvents();
+  } else {
+    btn.textContent = '👁 Solo Observar';
+    btn.classList.remove('active');
+    canvasArea.classList.add('observe');
+    canvasArea.classList.remove('interactive');
+    document.getElementById('tool-info').textContent = 'Modo: Observación';
+    remoteCursor.style.display = 'none';
+    detachCanvasEvents();
+  }
+}
+
+function getScaledCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = streamW / rect.width;
+  const scaleY = streamH / rect.height;
+  return {
+    nx: ((e.clientX - rect.left) * scaleX) / streamW,
+    ny: ((e.clientY - rect.top) * scaleY) / streamH,
+    px: (e.clientX - rect.left) / rect.width,
+    py: (e.clientY - rect.top) / rect.height,
+  };
+}
+
+let mouseMoveThrottle = 0;
+
+function onCanvasMouseMove(e) {
+  const now = Date.now();
+  if (now - mouseMoveThrottle < 40) return; // ~25 FPS de movimiento
+  mouseMoveThrottle = now;
+
+  const c = getScaledCoords(e);
+  // Actualizar cursor visual local
+  const rect = canvas.getBoundingClientRect();
+  remoteCursor.style.left = (e.clientX - canvasArea.getBoundingClientRect().left) + 'px';
+  remoteCursor.style.top = (e.clientY - canvasArea.getBoundingClientRect().top) + 'px';
+
+  sendWs({ type: 'mouse_move', x: c.nx, y: c.ny });
+}
+
+function onCanvasMouseDown(e) {
+  e.preventDefault();
+  const c = getScaledCoords(e);
+  const btn = ['left', 'middle', 'right'][e.button] || 'left';
+  sendWs({ type: 'mouse_click', x: c.nx, y: c.ny, button: btn, action: 'down' });
+}
+
+function onCanvasMouseUp(e) {
+  e.preventDefault();
+  const c = getScaledCoords(e);
+  const btn = ['left', 'middle', 'right'][e.button] || 'left';
+  sendWs({ type: 'mouse_click', x: c.nx, y: c.ny, button: btn, action: 'up' });
+}
+
+function onCanvasWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -1 : 1;
+  sendWs({ type: 'mouse_scroll', delta });
+}
+
+function onKeyDown(e) {
+  if (!isControlling) return;
+  // Evitar capturar F5, F12 del propio panel
+  if (e.key === 'F5' || e.key === 'F12') return;
+  e.preventDefault();
+  sendWs({ type: 'key', keyCode: e.keyCode, action: 'down', ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey });
+}
+
+function onKeyUp(e) {
+  if (!isControlling) return;
+  e.preventDefault();
+  sendWs({ type: 'key', keyCode: e.keyCode, action: 'up', ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey });
+}
+
+function attachCanvasEvents() {
+  canvas.addEventListener('mousemove', onCanvasMouseMove);
+  canvas.addEventListener('mousedown', onCanvasMouseDown);
+  canvas.addEventListener('mouseup', onCanvasMouseUp);
+  canvas.addEventListener('wheel', onCanvasWheel, { passive: false });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+}
+
+function detachCanvasEvents() {
+  canvas.removeEventListener('mousemove', onCanvasMouseMove);
+  canvas.removeEventListener('mousedown', onCanvasMouseDown);
+  canvas.removeEventListener('mouseup', onCanvasMouseUp);
+  canvas.removeEventListener('wheel', onCanvasWheel);
+  document.removeEventListener('keydown', onKeyDown);
+  document.removeEventListener('keyup', onKeyUp);
+}
+
+// ===========================================================================
+//  Portapapeles
+// ===========================================================================
+function sendClipboardToAgent() {
+  const text = document.getElementById('clipboard-text').value;
+  if (!text) return;
+  sendWs({ type: 'set_clipboard', text });
+  log('system', '📋 Portapapeles enviado al cliente.');
+}
+
+function requestClipboardFromAgent() {
+  sendWs({ type: 'get_clipboard' });
+}
+
+function copyLocalClipboard() {
+  const text = document.getElementById('clipboard-text').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    log('system', '📋 Copiado al portapapeles local.');
+  }).catch(() => {
+    log('error', 'No se pudo copiar al portapapeles local (permisos del navegador).');
+  });
+}
+
+// ===========================================================================
+//  Consola PowerShell
+// ===========================================================================
+function sendConsoleCommand() {
+  const input = document.getElementById('console-input');
+  const cmd = input.value.trim();
+  if (!cmd || !ws) return;
+
+  const cmdId = 'cmd_' + Date.now();
+  log('cmd', `PS> ${cmd}`);
+
+  // Enviar via API REST para compatibilidad con el sistema de polling
+  fetch(`${API_URL}/soporte/cmd`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Sercom-API-Key': panelKey
+    },
+    body: JSON.stringify({ id: clientId, cmd })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) log('error', data.error);
+    else if (data.output) log('output', data.output);
+  })
+  .catch(err => log('error', 'Error de red: ' + err.message));
+
+  input.value = '';
+}
+
+function handleCmdResponse(msg) {
+  log('output', msg.output || '(sin salida)');
+}
+
+document.getElementById('console-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendConsoleCommand();
+});
+
+// ===========================================================================
+//  Salud del Sistema (Health Check)
+// ===========================================================================
+async function fetchAgentHealth() {
+  try {
+    const res = await fetch(`${API_URL}/soporte/health?id=${clientId}`, {
+      headers: { 'X-Sercom-API-Key': panelKey }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    renderHealth(data.health);
+    document.getElementById('info-hostname').textContent = data.hostname || '—';
+  } catch { }
+}
+
+function renderHealth(h) {
+  if (!h) return;
+
+  if (h.cpu) {
+    document.getElementById('info-cpu').textContent = h.cpu.name || '—';
+    const load = h.cpu.load || 0;
+    document.getElementById('hb-cpu-val').textContent = load + '%';
+    const bar = document.getElementById('hb-cpu');
+    bar.style.width = load + '%';
+    bar.className = 'health-bar-fill' + (load > 80 ? ' danger' : load > 60 ? ' warn' : '');
+  }
+
+  if (h.ram) {
+    const total = h.ram.total || 0;
+    const free = h.os ? h.os.freeRam : 0;
+    const usePct = total > 0 ? Math.round((1 - free / total) * 100) : 0;
+    document.getElementById('hb-ram-val').textContent = (free || '?') + ' GB libre';
+    const bar = document.getElementById('hb-ram');
+    bar.style.width = usePct + '%';
+    bar.className = 'health-bar-fill' + (usePct > 85 ? ' danger' : usePct > 70 ? ' warn' : '');
+  }
+
+  if (h.os) document.getElementById('info-os').textContent = h.os.name || '—';
+
+  if (h.battery) {
+    const bat = h.battery;
+    document.getElementById('info-battery').textContent =
+      `${bat.charge || '?'}% · Estado: ${bat.status || '?'}`;
+  } else {
+    document.getElementById('info-battery').textContent = 'No aplica (PC de escritorio)';
+  }
+
+  if (h.disks && h.disks.length) {
+    const diskHtml = h.disks.map(d =>
+      `<div style="margin-bottom:6px">
+        <strong>${d.model || 'Disco'}</strong><br/>
+        <span style="color:var(--text-muted)">${d.size || '?'} GB · ${d.status || 'OK'}</span>
+      </div>`
+    ).join('');
+    document.getElementById('info-disks').innerHTML = diskHtml;
+  }
+}
+
+// ===========================================================================
+//  Solicitar Elevación de Privilegios UAC
+// ===========================================================================
+function requestElevation() {
+  if (!confirm('¿Deseas solicitar privilegios de Administrador en el equipo del cliente?\n\nEl cliente verá un aviso de Windows UAC y deberá aceptarlo.')) return;
+  const uacCmd = `Start-Process powershell -Verb runas -ArgumentList '-WindowStyle Hidden -Command "Start-Process cmd.exe -Verb runas"'`;
+  fetch(`${API_URL}/soporte/cmd`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Sercom-API-Key': panelKey },
+    body: JSON.stringify({ id: clientId, cmd: uacCmd })
+  });
+  log('system', '🛡 Solicitud de elevación UAC enviada al cliente.');
+}
+
+// ===========================================================================
+//  Desconexión
+// ===========================================================================
+function disconnectPanel() {
+  if (isStreaming) stopStream();
+  if (ws) ws.close();
+  document.getElementById('workspace').classList.remove('active');
+  document.getElementById('login-screen').style.display = 'flex';
+  setBadge('relay', '🔴 Desconectado', 'disconnected');
+  document.getElementById('badge-agent').style.display = 'none';
+  document.getElementById('badge-stream').style.display = 'none';
+  document.getElementById('console-output').innerHTML = '';
+}
+
+// ===========================================================================
+//  Utilidades
+// ===========================================================================
+function sendWs(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN)
+    ws.send(JSON.stringify(obj));
+}
+
+function log(type, text) {
+  const out = document.getElementById('console-output');
+  const line = document.createElement('div');
+  line.className = 'console-line ' + (
+    type === 'cmd' ? '' :
+    type === 'output' ? 'output' :
+    type === 'error' ? 'error' : 'system'
+  );
+  const time = new Date().toLocaleTimeString('es-MX', { hour12: false });
+  line.textContent = `[${time}] ${text}`;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function setBadge(id, text, cls) {
+  const el = document.getElementById('badge-' + id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'badge';
+  if (cls) el.classList.add(cls);
+}
+
+function setLoginError(msg) {
+  document.getElementById('login-error').textContent = msg;
+}
+
+// Acceso rapido con Enter
+document.getElementById('input-key').addEventListener('keydown', e => {
+  if (e.key === 'Enter') connectPanel();
+});
+</script>
+</body>
+</html>
