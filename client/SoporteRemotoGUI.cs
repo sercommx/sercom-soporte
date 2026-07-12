@@ -413,8 +413,7 @@ $r | ConvertTo-Json -Depth 3 -Compress";
             {
                 btnRemoteControl.Text = "⏹  Detener Transmisión";
                 btnRemoteControl.BackColor = Color.FromArgb(220, 38, 38);
-                btnRemoteControl.MouseEnter -= null;
-                btnRemoteControl.MouseLeave -= null;
+                // Remover listeners de hover al activar modo streaming
                 UpdateStreamStatus("📡 Iniciando transmisión segura...", Color.FromArgb(16, 185, 129));
                 Task.Run(() => StartStreamingAsync());
             }
@@ -609,15 +608,15 @@ $r | ConvertTo-Json -Depth 3 -Compress";
             finally
             {
                 _streaming = false;
-                try { _wsClient?.Dispose(); } catch { }
+                try { if (_wsClient != null) _wsClient.Dispose(); } catch { }
                 UpdateStreamStatus("⏹ Transmisión detenida", Color.FromArgb(107, 114, 128));
             }
         }
 
         private async Task StopStreamingAsync()
         {
-            _wsCts?.Cancel();
-            if (_wsClient?.State == WebSocketState.Open)
+            if (_wsCts != null) _wsCts.Cancel();
+            if (_wsClient != null && _wsClient.State == WebSocketState.Open)
             {
                 try { await _wsClient.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None); }
                 catch { }
@@ -640,7 +639,7 @@ $r | ConvertTo-Json -Depth 3 -Compress";
 
             _prevScreenBitmap = new Bitmap(screen.Width, screen.Height, PixelFormat.Format24bppRgb);
 
-            while (!ct.IsCancellationRequested && _wsClient?.State == WebSocketState.Open)
+            while (!ct.IsCancellationRequested && _wsClient != null && _wsClient.State == WebSocketState.Open)
             {
                 try
                 {
@@ -733,7 +732,7 @@ $r | ConvertTo-Json -Depth 3 -Compress";
             byte[] buffer = new byte[4096];
             var sb = new StringBuilder();
 
-            while (!ct.IsCancellationRequested && _wsClient?.State == WebSocketState.Open)
+            while (!ct.IsCancellationRequested && _wsClient != null && _wsClient.State == WebSocketState.Open)
             {
                 try
                 {
@@ -937,7 +936,7 @@ $r | ConvertTo-Json -Depth 3 -Compress";
                     string msg = string.Format("{{\"type\":\"clipboard\",\"text\":\"{0}\"}}",
                         text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n"));
                     byte[] data = Encoding.UTF8.GetBytes(msg);
-                    if (_wsClient?.State == WebSocketState.Open)
+                    if (_wsClient != null && _wsClient.State == WebSocketState.Open)
                         await _wsClient.SendAsync(new ArraySegment<byte>(data),
                             WebSocketMessageType.Text, true, CancellationToken.None);
                 }
@@ -1018,9 +1017,9 @@ $r | ConvertTo-Json -Depth 3 -Compress";
         private void CleanupSystem()
         {
             // Cancelar WebSocket activo
-            try { _wsCts?.Cancel(); } catch { }
-            try { _wsClient?.Dispose(); } catch { }
-            try { _prevScreenBitmap?.Dispose(); } catch { }
+            try { if (_wsCts != null) _wsCts.Cancel(); } catch { }
+            try { if (_wsClient != null) _wsClient.Dispose(); } catch { }
+            try { if (_prevScreenBitmap != null) _prevScreenBitmap.Dispose(); } catch { }
         }
     }
 }

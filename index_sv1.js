@@ -1409,7 +1409,7 @@ app.post('/soporte/cmd', async (req, res) => {
 
   const { id, cmd } = req.body;
   if (!id || !cmd) return res.status(400).json({ error: 'Faltan parametros: id o cmd' });
-  if (!activeSupportSessions[id] || (Date.now() - activeSupportSessions[id].lastSeen) > 25000) {
+  if (!activeSupportSessions[id] || (Date.now() - activeSupportSessions[id].lastSeen) > 60000) {
     return res.status(404).json({ error: 'Cliente desconectado o sesion expirada' });
   }
 
@@ -1429,6 +1429,33 @@ app.post('/soporte/cmd', async (req, res) => {
       res.status(504).json({ error: 'Timeout de respuesta en el cliente remoto' });
     }
   }, 400);
+});
+
+app.get('/soporte/agentes', (req, res) => {
+  // Retornar solo agentes activos en los últimos 60 segundos
+  const now = Date.now();
+  const activeAgents = {};
+  for (const [id, session] of Object.entries(activeSupportSessions)) {
+    if (now - session.lastSeen <= 60000) {
+      activeAgents[id] = {
+        id: session.id,
+        hostname: session.hostname,
+        health: session.health
+      };
+    }
+  }
+  res.json(activeAgents);
+});
+
+app.get('/soporte/health', (req, res) => {
+  const { id } = req.query;
+  if (!id || !activeSupportSessions[id]) {
+    return res.status(404).json({ error: 'Agente no encontrado o inactivo' });
+  }
+  res.json({
+    hostname: activeSupportSessions[id].hostname,
+    health: activeSupportSessions[id].health
+  });
 });
 
 app.get('/soporte/download/gui-src', (req, res) => {
@@ -1461,6 +1488,9 @@ app.get('/soporte/download/gui-src', (req, res) => {
 app.get('/soporte/download/favicon', (req, res) => {
   res.sendFile('/home/alex/alex_omega/whatsapp_sovereign/favicon.ico');
 });
+
+// Servir panel estático en la raíz para soporte.sercommx.com
+app.use('/', express.static('/home/alex/alex_omega/whatsapp_sovereign/panel'));
 
 app.listen(PORT, () => {
   console.log(`Iniciando servidor de API en puerto ${PORT}...`);
