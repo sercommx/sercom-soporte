@@ -404,7 +404,7 @@ outline: none;
 <div style="display: flex; justify-content: center; padding: 12px 0;">
 <div id="my-turnstile-container"></div>
 </div>
-<button class="btn-login" id="btn-login-submit" onclick="_secAttemptLogin()" disabled>Autenticar Credenciales</button>
+<button class="btn-login" id="btn-login-submit" onclick="_secAttemptLogin()">Autenticar Credenciales</button>
 <div id="login-error"></div>
 </div>
 </div>
@@ -480,10 +480,23 @@ function _secAttemptLogin() {
 const u = document.getElementById('login-user').value;
 const p = document.getElementById('login-pass').value;
 const errEl = document.getElementById('login-error');
+errEl.textContent = '';
+// Intentar obtener el token en caliente (útil para el flujo invisible)
+let currentToken = turnstileToken;
+if (!currentToken && window.turnstile) {
+currentToken = turnstile.getResponse();
+}
+if (!currentToken) {
+errEl.textContent = 'Verificando seguridad de red... por favor intenta en un segundo.';
+if (window.turnstile) {
+try { turnstile.execute('#my-turnstile-container'); } catch(e) {}
+}
+return;
+}
 fetch('/soporte/login', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ user: u, pass: p, turnstileToken: turnstileToken })
+body: JSON.stringify({ user: u, pass: p, turnstileToken: currentToken })
 })
 .then(r => r.json())
 .then(data => {
@@ -493,9 +506,15 @@ document.getElementById('login-screen').style.display = 'none';
 _secStartMonitoring();
 } else {
 errEl.textContent = data.error || 'Credenciales incorrectas';
+if (window.turnstile) turnstile.reset('#my-turnstile-container');
+turnstileToken = null;
 }
 })
-.catch(() => { errEl.textContent = 'Error de conexión con el servidor'; });
+.catch(() => {
+errEl.textContent = 'Error de conexión con el servidor';
+if (window.turnstile) turnstile.reset('#my-turnstile-container');
+turnstileToken = null;
+});
 }
 function _secLogout() {
 _secAuth = false;
