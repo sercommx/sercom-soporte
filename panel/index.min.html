@@ -469,9 +469,9 @@ if (window.turnstile) {
 turnstile.render('#my-turnstile-container', {
 sitekey: '0x4AAAAAACGkJx3Djb7AtUCr',
 theme: 'dark',
+execution: 'render',
 callback: function(token) {
 turnstileToken = token;
-document.getElementById('btn-login-submit').disabled = false;
 }
 });
 }
