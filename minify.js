@@ -53,8 +53,8 @@ try {
       .filter(line => line.length > 0)
       .join('\n');
 
-    // Reinyectar el JavaScript minificado
-    html = html.replace(scriptRegex, `<script>${js}</script>`);
+    // Reinyectar el JavaScript minificado de forma segura evitando problemas con símbolos de peso ($)
+    html = html.replace(scriptRegex, () => `<script data-cfasync="false">${js}</script>`);
   }
 
   // 4. Minificación básica del HTML (remover espacios múltiples y saltos de línea innecesarios fuera de áreas pre/textarea)
