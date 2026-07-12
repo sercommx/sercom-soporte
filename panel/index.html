@@ -516,7 +516,6 @@
   </div>
 </div>
 
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback" async defer data-cfasync="false"></script>
 <script data-cfasync="false">
   let authenticated = false;
   let turnstileToken = null;
@@ -710,5 +709,6 @@
     setInterval(fetchAgents, 5000);
   }
 </script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback" async defer data-cfasync="false"></script>
 </body>
 </html>
