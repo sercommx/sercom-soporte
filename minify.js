@@ -51,7 +51,7 @@ try {
     js = js.split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0)
-      .join(' ');
+      .join('\n');
 
     // Reinyectar el JavaScript minificado
     html = html.replace(scriptRegex, `<script>${js}</script>`);
