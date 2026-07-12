@@ -22,7 +22,7 @@ try {
 
     // 1. Remover comentarios de JS (multilínea y unilineal)
     js = js.replace(/\/\*[\s\S]*?\*\//g, '');
-    js = js.replace(/\/\/.*$/gm, '');
+    js = js.replace(/(^|[^:])\/\/.*$/gm, '$1');
 
     // 2. Ofuscación de variables y funciones internas para dificultar ingeniería inversa
     const obfuscationMap = {
