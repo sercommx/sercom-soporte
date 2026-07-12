@@ -649,8 +649,31 @@
           ctx.drawImage(img, msg.x, msg.y, msg.cellW, msg.cellH);
         };
         img.src = 'data:image/jpeg;base64,' + msg.data;
+      } else if (msg.type === 'agent_offline') {
+        // Si el agente está offline, enviarle la orden de iniciar transmisión
+        console.log("El agente está offline en el relay. Despertándolo...");
+        fetch('/soporte/cmd', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+          },
+          body: JSON.stringify({ id: id, cmd: '__RELAY_START__' })
+        }).catch(() => {});
       }
     };
+
+    // Enviar primer intento de despertar al agente de forma asíncrona
+    setTimeout(() => {
+      fetch('/soporte/cmd', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+        },
+        body: JSON.stringify({ id: id, cmd: '__RELAY_START__' })
+      }).catch(() => {});
+    }, 100);
   }
 
   function startStream() {
@@ -681,6 +704,17 @@
     if (activeWs) {
       activeWs.send(JSON.stringify({ type: 'stop_stream' }));
       activeWs.close();
+    }
+    // Enviar señal HTTP para indicarle al agente que detenga la transmisión
+    if (currentAgentId) {
+      fetch('/soporte/cmd', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+        },
+        body: JSON.stringify({ id: currentAgentId, cmd: '__RELAY_STOP__' })
+      }).catch(() => {});
     }
     document.getElementById('session-view').classList.remove('active');
   }

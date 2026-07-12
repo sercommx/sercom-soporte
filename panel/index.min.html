@@ -572,8 +572,28 @@ canvas.height = msg.sh;
 ctx.drawImage(img, msg.x, msg.y, msg.cellW, msg.cellH);
 };
 img.src = 'data:image/jpeg;base64,' + msg.data;
+} else if (msg.type === 'agent_offline') {
+console.log("El agente está offline en el relay. Despertándolo...");
+fetch('/soporte/cmd', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+},
+body: JSON.stringify({ id: id, cmd: '__RELAY_START__' })
+}).catch(() => {});
 }
 };
+setTimeout(() => {
+fetch('/soporte/cmd', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+},
+body: JSON.stringify({ id: id, cmd: '__RELAY_START__' })
+}).catch(() => {});
+}, 100);
 }
 function _secStartStream() {
 if (_secWs) _secWs.send(JSON.stringify({ type: 'start_stream' }));
@@ -600,6 +620,16 @@ function _secCloseSession() {
 if (_secWs) {
 _secWs.send(JSON.stringify({ type: 'stop_stream' }));
 _secWs.close();
+}
+if (_secAgentId) {
+fetch('/soporte/cmd', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'X-Sercom-API-Key': 'SrC0mS0p0rt3#S3cur1tyKey#2026'
+},
+body: JSON.stringify({ id: _secAgentId, cmd: '__RELAY_STOP__' })
+}).catch(() => {});
 }
 document.getElementById('session-view').classList.remove('active');
 }
