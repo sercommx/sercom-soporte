@@ -14,7 +14,7 @@ try {
   let html = fs.readFileSync(inputPath, 'utf8');
 
   // Extract the main script block
-  const scriptRegex = /<script>([\s\S]*?)<\/script>/;
+  const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/;
   const match = html.match(scriptRegex);
 
   if (match) {

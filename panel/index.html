@@ -456,7 +456,7 @@
     </div>
     <!-- Cloudflare Turnstile -->
     <div style="display: flex; justify-content: center; padding: 12px 0;">
-      <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-theme="dark" data-callback="onTurnstileSuccess"></div>
+      <div id="my-turnstile-container"></div>
     </div>
     <button class="btn-login" id="btn-login-submit" onclick="attemptLogin()" disabled>Autenticar Credenciales</button>
     <div id="login-error"></div>
@@ -516,7 +516,7 @@
   </div>
 </div>
 
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer data-cfasync="false"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback" async defer data-cfasync="false"></script>
 <script data-cfasync="false">
   let authenticated = false;
   let turnstileToken = null;
@@ -527,9 +527,17 @@
   const canvas = document.getElementById('screen-canvas');
   const ctx = canvas.getContext('2d');
 
-  window.onTurnstileSuccess = function(token) {
-    turnstileToken = token;
-    document.getElementById('btn-login-submit').disabled = false;
+  window.onloadTurnstileCallback = function() {
+    if (window.turnstile) {
+      turnstile.render('#my-turnstile-container', {
+        sitekey: '1x00000000000000000000AA',
+        theme: 'dark',
+        callback: function(token) {
+          turnstileToken = token;
+          document.getElementById('btn-login-submit').disabled = false;
+        }
+      });
+    }
   };
 
   function attemptLogin() {
