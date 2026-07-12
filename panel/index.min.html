@@ -557,7 +557,7 @@ function _secTakeControl(id) {
 _secAgentId = id;
 document.getElementById('session-title').textContent = `Consola: ${id}`;
 document.getElementById('session-view').classList.add('active');
-const wsUrl = `${WS_RELAY_URL}?type=panel&id=${id}&panel_key=SrC0mS0p0rt3#S3cur1tyKey#2026`;
+const wsUrl = `${WS_RELAY_URL}?type=panel&id=${id}&panel_key=${encodeURIComponent('SrC0mS0p0rt3#S3cur1tyKey#2026')}`;
 _secWs = new WebSocket(wsUrl);
 _secWs.onmessage = (e) => {
 let msg;
