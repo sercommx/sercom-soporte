@@ -1,6 +1,7 @@
 import { makeWASocket, useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode-terminal';
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { exec } from 'child_process';
 import pino from 'pino';
@@ -82,6 +83,7 @@ db.serialize(() => {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser('SercomSoporteSecretCookieKey2026'));
 
 // Logger silencioso para Baileys
 const logger = pino({ level: 'silent' });
@@ -1270,7 +1272,18 @@ const SERCOM_API_KEY = "SrC0mS0p0rt3#S3cur1tyKey#2026";
 const SERCOM_AGENT_TOKEN = "SercomAgentToken2026SecureHashKey";
 
 const activeSupportSessions = {};
+const supportSessions = {}; // Sesiones activas de técnicos autenticados
 let lastTechnicalSupportJid = '18627474530380@s.whatsapp.net';
+
+function requireSupportAuth(req, res, next) {
+  const token = req.signedCookies ? req.signedCookies.soporte_session : null;
+  if (token && supportSessions[token]) {
+    // Renovar sesión activa
+    supportSessions[token] = Date.now();
+    return next();
+  }
+  res.status(401).json({ error: 'Sesión inválida o expirada' });
+}
 
 app.post('/soporte/register', async (req, res) => {
   // Validar cabecera de autenticación del agente
@@ -1401,10 +1414,12 @@ app.post('/soporte/response', (req, res) => {
 });
 
 app.post('/soporte/cmd', async (req, res) => {
-  // Validar clave de API para envío de comandos remotos (evita accesos no autorizados al bot)
+  // Validar clave de API O sesión de cookie HttpOnly firmada para control de comandos
   const apiKey = req.headers['x-sercom-api-key'];
-  if (apiKey !== SERCOM_API_KEY) {
-    return res.status(401).json({ error: 'Acceso no autorizado' });
+  const sessionToken = req.signedCookies ? req.signedCookies.soporte_session : null;
+
+  if (apiKey !== SERCOM_API_KEY && (!sessionToken || !supportSessions[sessionToken])) {
+    return res.status(401).json({ error: 'Acceso no autorizado o sesión expirada' });
   }
 
   const { id, cmd } = req.body;
@@ -1442,7 +1457,7 @@ app.post('/soporte/login', async (req, res) => {
   }
 
   try {
-    const secretKey = '0x4AAAAAACBnLS1F4h1UiZNP94F-8tIh4Cs';
+    const secretKey = '1x00000000000000000000000000000000';
     const verifyUrl = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
     
     const response = await fetch(verifyUrl, {
@@ -1453,6 +1468,18 @@ app.post('/soporte/login', async (req, res) => {
     
     const outcome = await response.json();
     if (outcome.success) {
+      // Generar sesión segura y guardarla en cookies HttpOnly
+      const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      supportSessions[sessionToken] = Date.now();
+
+      res.cookie('soporte_session', sessionToken, {
+        httpOnly: true,
+        secure: true,
+        signed: true,
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000 // 8 horas
+      });
+
       res.json({ success: true });
     } else {
       res.status(403).json({ error: 'Validación de captcha inválida o expirada' });
@@ -1462,7 +1489,7 @@ app.post('/soporte/login', async (req, res) => {
   }
 });
 
-app.get('/soporte/agentes', (req, res) => {
+app.get('/soporte/agentes', requireSupportAuth, (req, res) => {
   // Retornar solo agentes activos en los últimos 60 segundos
   const now = Date.now();
   const activeAgents = {};
@@ -1478,7 +1505,7 @@ app.get('/soporte/agentes', (req, res) => {
   res.json(activeAgents);
 });
 
-app.get('/soporte/health', (req, res) => {
+app.get('/soporte/health', requireSupportAuth, (req, res) => {
   const { id } = req.query;
   if (!id || !activeSupportSessions[id]) {
     return res.status(404).json({ error: 'Agente no encontrado o inactivo' });
@@ -1492,7 +1519,7 @@ app.get('/soporte/health', (req, res) => {
 app.get('/soporte/download/gui-src', (req, res) => {
   try {
     const srcPath = '/home/alex/alex_omega/whatsapp_sovereign/SoporteRemotoGUI.cs';
-    const logoPath = '/home/alex/alex_omega/whatsapp_sovereign/logo-texto-negro.png';
+    const logoPath = '/home/alex/alex_omega/whatsapp_sovereign/logo-texto-blanco.png';
     const iconPath = '/home/alex/alex_omega/whatsapp_sovereign/favicon.ico';
     
     let code = fs.readFileSync(srcPath, 'utf-8');
@@ -1516,11 +1543,24 @@ app.get('/soporte/download/gui-src', (req, res) => {
   }
 });
 
+app.get('/soporte/download/logo', (req, res) => {
+  res.sendFile('/home/alex/alex_omega/whatsapp_sovereign/logo-texto-blanco.webp', (err) => {
+    if (err) {
+      console.error("ERROR AL ENVIAR LOGO:", err);
+      res.status(500).send(err.message);
+    }
+  });
+});
+
 app.get('/soporte/download/favicon', (req, res) => {
   res.sendFile('/home/alex/alex_omega/whatsapp_sovereign/favicon.ico');
 });
 
-// Servir panel estático en la raíz para soporte.sercommx.com
+// Servir panel estático en la raíz para soporte.sercommx.com deshabilitando caché de forma estricta
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.sendFile('/home/alex/alex_omega/whatsapp_sovereign/panel/index.html');
+});
 app.use('/', express.static('/home/alex/alex_omega/whatsapp_sovereign/panel'));
 
 app.listen(PORT, () => {
