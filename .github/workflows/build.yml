@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Descargar Código Fuente
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Inyectar Secretos de Producción en Caliente
         shell: pwsh
@@ -39,7 +39,7 @@ jobs:
           C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /target:winexe /out:SercomSoporte.exe /win32icon:favicon.ico SoporteRemotoGUI.cs
 
       - name: Subir Binario Compilado Temporal
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: SercomSoporte-Unsigned
           path: SercomSoporte.exe
