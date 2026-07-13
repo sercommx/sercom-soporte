@@ -43,7 +43,7 @@ namespace SercomSoporte
         private const string ServerUrl   = "SERVER_URL_PLACEHOLDER";
         private const string RelayWsUrl  = "RELAY_WS_PLACEHOLDER";
         private const string AgentToken  = "AGENT_TOKEN_PLACEHOLDER";
-        private const string AppVersion  = "v3.0.0";
+        private const string AppVersion  = "v3.4.0";
 
         // ── Recursos gráficos inyectados en caliente por Express ─────────────
         private static readonly string LogoBase64 = "";
