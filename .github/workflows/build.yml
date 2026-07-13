@@ -1,0 +1,45 @@
+name: Compilar Sercom Desk
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar Código Fuente
+        uses: actions/checkout@v3
+
+      - name: Inyectar Secretos de Producción en Caliente
+        shell: pwsh
+        run: |
+          $csFile = "SoporteRemotoGUI.cs"
+          if (Test-Path $csFile) {
+            $content = Get-Content $csFile -Raw
+            # Reemplazar placeholders con los secretos seguros configurados en el repositorio de GitHub
+            $content = $content -replace "SERVER_URL_PLACEHOLDER", "${{ secrets.SERCOM_SERVER_URL }}"
+            $content = $content -replace "RELAY_WS_PLACEHOLDER", "${{ secrets.SERCOM_RELAY_WS_URL }}"
+            $content = $content -replace "AGENT_TOKEN_PLACEHOLDER", "${{ secrets.SERCOM_AGENT_TOKEN }}"
+            Set-Content $csFile -Value $content -NoNewline
+            Write-Output "Secretos inyectados de forma segura antes de compilar."
+          } else {
+            Write-Error "No se encontró el archivo SoporteRemotoGUI.cs"
+            exit 1
+          }
+
+      - name: Compilar Agente .exe (MSBuild)
+        run: |
+          # Utilizar el compilador csc.exe incluido en la máquina virtual de Windows de GitHub
+          C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /target:winexe /out:SercomSoporte.exe /win32icon:favicon.ico SoporteRemotoGUI.cs
+
+      - name: Subir Binario Compilado Temporal
+        uses: actions/upload-artifact@v3
+        with:
+          name: SercomSoporte-Unsigned
+          path: SercomSoporte.exe

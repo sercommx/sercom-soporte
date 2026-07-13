@@ -1,7 +1,16 @@
-node_modules/
-.env
-*.log
-*.ico
-*.png
-*.webp
-dist/
+# Binarios compilados locales
+*.exe
+*.dll
+*.pdb
+
+# Archivos de depuración y temporales
+csc_out.txt
+*.bat
+*.ps1
+*.pfx
+*.cer
+*.txt
+.idea/
+.vs/
+bin/
+obj/
