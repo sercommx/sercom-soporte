@@ -6,11 +6,11 @@ Este documento describe la arquitectura de red, los servidores, los puertos, el 
 
 ## 1. Mapeo de Servidores y Puertos
 
-El bot y el backend de Express que actúan como puente del sistema de soporte corren de forma centralizada en el servidor **SV1** de producción:
+El bot y el backend de Express que actúan como puente del sistema de soporte corren de forma centralizada en el servidor de producción:
 
-* **Servidor SV1:** `sv1.sercommx.com`
-* **Puerto de Soporte (Express):** `6001` (abierto en el firewall `iptables` de SV1 de forma global).
-* **Puerto de SSH del Servidor:** `7365` (usado para la administración y sincronización de código).
+* **Servidor:** Dominio público del backend
+* **Puerto de Soporte (Express):** `6001` (abierto en el firewall de forma global).
+* **Puerto de SSH del Servidor:** Puerto configurado (usado para la administración y sincronización de código).
 
 ---
 
@@ -44,7 +44,7 @@ El bot y el backend de Express que actúan como puente del sistema de soporte co
 
 ## 3. Integración con el Bot de WhatsApp (Mismo Proceso)
 
-El bot de WhatsApp (`index.js` en SV1) corre en el mismo proceso de Node.js que el Express de soporte. Esto permite una comunicación directa en memoria:
+El bot de WhatsApp (`index.js`) corre en el mismo proceso de Node.js que el Express de soporte. Esto permite una comunicación directa en memoria:
 
 1. El técnico escribe en WhatsApp: `.alex soporte cmd 9809-4887 Get-Process`.
 2. El bot intercepta el mensaje, valida el JID del técnico y escribe directamente el comando en la cola (`queue`) en memoria de la sesión activa del Express.

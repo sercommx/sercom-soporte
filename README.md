@@ -45,11 +45,11 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
 
 ---
 
-## 🖥️ Cómo Desplegar el Relay (en SV1)
+## 🖥️ Cómo Desplegar el Relay
 
 ```bash
-cd /home/alex/alex_omega/whatsapp_sovereign/
-npm install ws
+cd server/
+npm install
 node relay.js
 ```
 
@@ -68,7 +68,7 @@ node relay.js
 
 ---
 
-## 📡 Puertos de Infraestructura (SV1)
+## 📡 Puertos de Infraestructura
 
 | Puerto | Servicio |
 |--------|---------|
