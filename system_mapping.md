@@ -8,7 +8,7 @@ Este documento describe la arquitectura de red, los servidores, los puertos, el 
 
 El bot y el backend de Express que actúan como puente del sistema de soporte corren de forma centralizada en el servidor **SV1** de producción:
 
-* **Servidor SV1:** `sv1.sercommx.com` (IP: `129.159.72.206`)
+* **Servidor SV1:** `sv1.sercommx.com`
 * **Puerto de Soporte (Express):** `6001` (abierto en el firewall `iptables` de SV1 de forma global).
 * **Puerto de SSH del Servidor:** `7365` (usado para la administración y sincronización de código).
 

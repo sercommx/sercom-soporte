@@ -68,7 +68,7 @@ node relay.js
 
 ---
 
-## 📡 Puertos de Infraestructura (SV1: 129.159.72.206)
+## 📡 Puertos de Infraestructura (SV1)
 
 | Puerto | Servicio |
 |--------|---------|
