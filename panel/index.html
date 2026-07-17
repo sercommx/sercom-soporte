@@ -521,7 +521,7 @@
   let turnstileToken = null;
   let activeWs = null;
   let currentAgentId = null;
-  const WS_RELAY_URL = window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.hostname}:6001`;
+  const WS_RELAY_URL = window.location.protocol === 'https:' ? `wss://${window.location.hostname}:6002` : `ws://${window.location.hostname}:6002`;
 
   const canvas = document.getElementById('screen-canvas');
   const ctx = canvas.getContext('2d');
