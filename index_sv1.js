@@ -83,6 +83,7 @@ db.serialize(() => {
 
 // Inicializar Express
 const app = express();
+app.set('trust proxy', 1); // Confiar en Cloudflare (X-Forwarded-Proto)
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser('SercomSoporteSecretCookieKey2026'));
@@ -1293,18 +1294,35 @@ app.post('/send', async (req, res) => {
 });
 
 // === SISTEMA DE SOPORTE INTERACTIVO INDEPENDIENTE ===
-const SERCOM_API_KEY = "SrC0mS0p0rt3#S3cur1tyKey#2026";
+const SERCOM_API_KEY   = "SrC0mS0p0rt3#S3cur1tyKey#2026";
+const AGENT_VERSION    = "v3.4.1"; // incrementar con cada release del agente
 const SERCOM_AGENT_TOKEN = "SercomAgentToken2026SecureHashKey";
 
 const activeSupportSessions = {};
-const supportSessions = {}; // Sesiones activas de técnicos autenticados
+// Sesiones de soporte persistidas en SQLite (sobreviven reinicios)
+const supportSessions = {}; // cache en memoria, cargado desde SQLite
+db.run(`CREATE TABLE IF NOT EXISTS soporte_sessions (
+  token TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL
+)`, () => {
+  // Cargar sesiones vigentes (< 8h) al arrancar
+  const cutoff = Date.now() - 8 * 60 * 60 * 1000;
+  db.all(`SELECT token, created_at FROM soporte_sessions WHERE created_at > ?`, [cutoff], (err, rows) => {
+    if (!err && rows) {
+      rows.forEach(r => { supportSessions[r.token] = r.created_at; });
+      console.log(`[SOPORTE] ${rows.length} sesión(es) de técnico restaurada(s) desde SQLite`);
+    }
+  });
+});
 let lastTechnicalSupportJid = '18627474530380@s.whatsapp.net';
 
 function requireSupportAuth(req, res, next) {
   const token = req.signedCookies ? req.signedCookies.soporte_session : null;
   if (token && supportSessions[token]) {
     // Renovar sesión activa
-    supportSessions[token] = Date.now();
+    const now = Date.now();
+    supportSessions[token] = now;
+    db.run(`UPDATE soporte_sessions SET created_at = ? WHERE token = ?`, [now, token]);
     return next();
   }
   res.status(401).json({ error: 'Sesión inválida o expirada' });
@@ -1495,13 +1513,15 @@ app.post('/soporte/login', async (req, res) => {
     if (outcome.success) {
       // Generar sesión segura y guardarla en cookies HttpOnly
       const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      supportSessions[sessionToken] = Date.now();
+      const sessionTs = Date.now();
+      supportSessions[sessionToken] = sessionTs;
+      db.run(`INSERT OR REPLACE INTO soporte_sessions (token, created_at) VALUES (?, ?)`, [sessionToken, sessionTs]);
 
       res.cookie('soporte_session', sessionToken, {
         httpOnly: true,
         secure: true,
         signed: true,
-        sameSite: 'strict',
+        sameSite: 'lax',
         maxAge: 8 * 60 * 60 * 1000 // 8 horas
       });
 
@@ -1548,6 +1568,9 @@ app.get('/soporte/download/gui-src', (req, res) => {
     const iconPath = '/home/alex/alex_omega/whatsapp_sovereign/favicon.ico';
     
     let code = fs.readFileSync(srcPath, 'utf-8');
+
+    // Inyectar versión actual del agente
+    code = code.replace('"##AGENT_VERSION##"', `"${AGENT_VERSION}"`);
     
     // Inyectar logotipo en base64
     if (fs.existsSync(logoPath)) {
@@ -1567,6 +1590,18 @@ app.get('/soporte/download/gui-src', (req, res) => {
     res.status(500).send(`Error: ${err.message}`);
   }
 });
+
+// ── Versión actual del agente (consultada por el cliente para auto-update) ────
+app.get('/soporte/version', (req, res) => {
+  res.json({
+    version: AGENT_VERSION,
+    downloadUrl: '/soporte/download/gui-src',
+    changelog: 'Mejoras de estabilidad y nuevas funciones de soporte remoto'
+  });
+});
+
+// Alias para cualquier versión numerada del código fuente del agente
+app.get('/soporte/download/gui-src-v:ver', (req, res) => res.redirect('/soporte/download/gui-src'));
 
 app.get('/soporte/download/logo', (req, res) => {
   res.sendFile('/home/alex/alex_omega/whatsapp_sovereign/logo-texto-blanco.webp', (err) => {

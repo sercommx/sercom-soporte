@@ -52,7 +52,8 @@ const PANEL_TO_AGENT_TYPES = new Set([
  *
  * @type {Map<string, { ws: WebSocket, panel: WebSocket|null }>}
  */
-const agentSessions = new Map();
+const agentSessions  = new Map(); // sesiones activas: agente WS conectado
+const pendingPanels  = new Map(); // paneles esperando que el agente conecte su WS
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  UTILIDADES
@@ -182,14 +183,27 @@ function handleAgent(ws, request, id) {
     if (old.ws && old.ws.readyState === WebSocket.OPEN) {
       old.ws.close(4409, 'Nueva conexión de agente para este id');
     }
-    // Notificar al panel anterior que el agente se desconectó
-    if (old.panel && old.panel.readyState === WebSocket.OPEN) {
-      sendJSON(old.panel, { type: 'agent_disconnected' });
-    }
+    // NO notificar desconexión — el agente se reconecta para streaming, conservar panel
   }
 
-  // Registrar sesión
-  agentSessions.set(id, { ws, panel: null });
+  // Buscar panel pendiente (llegó antes que el agente WS)
+  let existingPanel = null;
+  if (pendingPanels.has(id)) {
+    const pendingWs = pendingPanels.get(id);
+    if (pendingWs && pendingWs.readyState === WebSocket.OPEN) {
+      existingPanel = pendingWs;
+      log(`🔗 Panel pendiente vinculado al agente recién conectado id=${id}`);
+    }
+    pendingPanels.delete(id);
+  }
+
+  // Registrar sesión — conservar el panel pendiente o previo si sigue abierto
+  agentSessions.set(id, { ws, panel: existingPanel });
+
+  // Notificar al panel que el agente ya está listo
+  if (existingPanel && existingPanel.readyState === WebSocket.OPEN) {
+    sendJSON(existingPanel, { type: 'connected', id });
+  }
 
   // ── Recepción de mensajes del agente ─────────────────────────────────────
   ws.on('message', (raw) => {
@@ -272,8 +286,15 @@ function handlePanel(ws, request, id) {
     sendJSON(ws, { type: 'connected', id });
     log(`🔗 Panel vinculado al agente id=${id}`);
   } else {
+    // Agente aún no está en el relay WS — guardar panel para vincularlo en cuanto llegue
     sendJSON(ws, { type: 'agent_offline' });
-    log(`📴 Agente offline para id=${id}, panel notificado`);
+    log(`📴 Agente offline para id=${id} — panel guardado como pendiente`);
+    // Limpiar panel pendiente anterior si hubiera
+    if (pendingPanels.has(id)) {
+      const old = pendingPanels.get(id);
+      if (old && old.readyState === WebSocket.OPEN) old.close(4409, 'Nuevo panel pendiente para este id');
+    }
+    pendingPanels.set(id, ws);
   }
 
   // ── Recepción de mensajes del panel ──────────────────────────────────────
@@ -310,6 +331,11 @@ function handlePanel(ws, request, id) {
   // ── Desconexión del panel ─────────────────────────────────────────────────
   ws.on('close', (code, reason) => {
     log(`🔌 Panel desconectado  id=${id}  code=${code}  reason=${reason.toString()}`);
+
+    // Limpiar de pendingPanels si estaba ahí
+    if (pendingPanels.get(id) === ws) {
+      pendingPanels.delete(id);
+    }
 
     const currentSession = agentSessions.get(id);
     if (currentSession && currentSession.panel === ws) {

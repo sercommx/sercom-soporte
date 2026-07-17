@@ -40,10 +40,10 @@ namespace SercomSoporte
     public class SoporteRemotoGUI : Form
     {
         // ── Configuración del servidor ───────────────────────────────────────
-        private const string ServerUrl   = "SERVER_URL_PLACEHOLDER";
-        private const string RelayWsUrl  = "RELAY_WS_PLACEHOLDER";
-        private const string AgentToken  = "AGENT_TOKEN_PLACEHOLDER";
-        private const string AppVersion  = "v3.4.0";
+        private const string ServerUrl   = "http://129.159.72.206:6001";
+        private const string RelayWsUrl  = "ws://129.159.72.206:6002";
+        private const string AgentToken  = "SercomAgentToken2026SecureHashKey";
+        private const string AppVersion  = "##AGENT_VERSION##"; // inyectado por el servidor al descargar
 
         // ── Recursos gráficos inyectados en caliente por Express ─────────────
         private static readonly string LogoBase64 = "";
@@ -68,6 +68,7 @@ namespace SercomSoporte
         // ── Controles UI ─────────────────────────────────────────────────────
         private Label lblStatus;
         private Label lblIdValue;
+        private Label _lblVersion;
         private Button btnCopyId;
         private PictureBox picLogo;
 
@@ -226,17 +227,17 @@ namespace SercomSoporte
             };
             this.Controls.Add(lblHint);
 
-            // ── Versión ───────────────────────────────────────────────────────
-            var lblVer = new Label
+            // ── Versión (campo de instancia para poder actualizarla) ─────────
+            _lblVersion = new Label
             {
                 Text      = AppVersion,
-                Font      = new Font("Segoe UI", 7f),
-                ForeColor = Color.FromArgb(60, 60, 80),
-                Bounds    = new Rectangle(330, 280, 60, 15),
+                Font      = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(80, 80, 110),
+                Bounds    = new Rectangle(10, 280, 390, 15),
                 AutoSize  = false,
                 TextAlign = ContentAlignment.MiddleRight
             };
-            this.Controls.Add(lblVer);
+            this.Controls.Add(_lblVersion);
         }
 
         // =====================================================================
@@ -304,6 +305,10 @@ namespace SercomSoporte
                 {
                     if (res.StatusCode == HttpStatusCode.OK)
                     {
+                        // Hardware en background
+                        System.Threading.Tasks.Task.Run(() => SendHardwareHealth());
+                        // Verificar actualizaciones en background (solo en el primer registro)
+                        System.Threading.Tasks.Task.Run(() => CheckForUpdates());
                         return true;
                     }
                     else
@@ -712,9 +717,194 @@ namespace SercomSoporte
             catch (Exception ex) { return "[ERROR] " + ex.Message; }
         }
 
+        // =====================================================================
+        //  Auto-actualización: descarga, compila y relanza si hay nueva versión
+        // =====================================================================
+        private void CheckForUpdates()
+        {
+            try
+            {
+                // 1. Consultar versión actual en el servidor
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ServerUrl + "/soporte/version");
+                req.Method  = "GET";
+                req.Timeout = 8000;
+                req.Headers.Add("x-sercom-agent-token", AgentToken);
+
+                string serverVersion = "";
+                using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
+                using (StreamReader sr = new StreamReader(res.GetResponseStream()))
+                {
+                    string json = sr.ReadToEnd();
+                    // Extraer campo "version" del JSON
+                    serverVersion = ExtractJsonValue(json, "version");
+                }
+
+                if (string.IsNullOrEmpty(serverVersion) || serverVersion == AppVersion)
+                    return; // ya estamos actualizados
+
+                // 2. Notificar al usuario
+                SetStatus("🔄 Nueva versión " + serverVersion + " — actualizando...", Color.FromArgb(99, 179, 237));
+                UpdateVersionLabel("🔄 Actualizando a " + serverVersion + "...");
+
+                // 3. Descargar código fuente nuevo
+                string tempDir  = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sercom_update");
+                System.IO.Directory.CreateDirectory(tempDir);
+                string srcPath  = System.IO.Path.Combine(tempDir, "SoporteRemotoGUI_new.cs");
+                string exePath  = System.IO.Path.Combine(tempDir, "SercomSoporte_new.exe");
+                string icoPath  = System.IO.Path.Combine(tempDir, "favicon.ico");
+
+                using (var wc = new System.Net.WebClient())
+                {
+                    wc.Headers.Add("x-sercom-agent-token", AgentToken);
+                    wc.DownloadFile(ServerUrl + "/soporte/download/gui-src", srcPath);
+                }
+
+                // 4. Descargar ícono
+                try
+                {
+                    using (var wc = new System.Net.WebClient())
+                        wc.DownloadFile(ServerUrl + "/soporte/download/favicon", icoPath);
+                }
+                catch { icoPath = null; }
+
+                // 5. Compilar nueva versión con csc.exe
+                string cscPath = System.IO.Path.Combine(
+                    System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(),
+                    "csc.exe");
+                if (!System.IO.File.Exists(cscPath))
+                    cscPath = @"C:\Windows\Microsoft.NET\Framework4.0.30319\csc.exe";
+
+                string iconArg = (icoPath != null && System.IO.File.Exists(icoPath)) ? (" /win32icon:\"" + icoPath + "\"") : "";
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName               = cscPath,
+                    Arguments              = "/target:winexe /out:\"" + exePath + "\"" + iconArg + " \"" + srcPath + "\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError  = true,
+                    UseShellExecute        = false,
+                    CreateNoWindow         = true
+                };
+
+                using (var proc = System.Diagnostics.Process.Start(psi))
+                {
+                    proc.WaitForExit(60000);
+                    if (proc.ExitCode != 0) return; // fallo de compilación — abortar
+                }
+
+                if (!System.IO.File.Exists(exePath)) return;
+
+                // 6. Crear script batch que: espera que salgamos → copia → lanza nuevo
+                string currentExe  = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                string updaterBat  = System.IO.Path.Combine(tempDir, "updater.bat");
+                System.IO.File.WriteAllText(updaterBat,
+                    "@echo off\r\n" +
+                    "timeout /t 2 /nobreak >nul\r\n" +
+                    "copy /y \"" + exePath + "\" \"" + currentExe + "\" >nul\r\n" +
+                    "start \"\" \"" + currentExe + "\"\r\n" +
+                    "del \"" + updaterBat + "\"\r\n");
+
+                // 7. Lanzar batch y salir
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName        = "cmd.exe",
+                    Arguments       = "/c \"" + updaterBat + "\"",
+                    CreateNoWindow  = true,
+                    UseShellExecute = false
+                });
+
+                _running = false;
+                this.Invoke(new MethodInvoker(() => Application.Exit()));
+            }
+            catch { /* auto-update silencioso — no interrumpir operación */ }
+        }
+
+        private void UpdateVersionLabel(string text)
+        {
+            if (_lblVersion == null) return;
+            if (_lblVersion.InvokeRequired)
+                _lblVersion.Invoke(new MethodInvoker(() => _lblVersion.Text = text));
+            else
+                _lblVersion.Text = text;
+        }
+
+        // =====================================================================
+        //  Envío diferido de datos de hardware al servidor
+        // =====================================================================
+        private void SendHardwareHealth()
+        {
+            try
+            {
+                string script = GetHealthScript();
+                string result = ExecutePowerShell(script).Trim();
+                if (string.IsNullOrEmpty(result) || !result.StartsWith("{")) return;
+
+                string body = string.Format("{{\"id\":\"{0}\",\"hostname\":\"{1}\",\"health\":{2}}}", _supportId, _hostname, result);
+                byte[] data = Encoding.UTF8.GetBytes(body);
+
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ServerUrl + "/soporte/register");
+                req.Method        = "POST";
+                req.ContentType   = "application/json";
+                req.ContentLength = data.Length;
+                req.Timeout       = 15000;
+                req.Headers.Add("x-sercom-agent-token", AgentToken);
+                using (Stream s = req.GetRequestStream()) s.Write(data, 0, data.Length);
+                using (req.GetResponse()) { }
+            }
+            catch { }
+        }
+
         private string GetHealthScript()
         {
-            return @"$hw=Get-WmiObject Win32_ComputerSystem;$cpu=Get-WmiObject Win32_Processor|Select-Object -First 1;$os=Get-WmiObject Win32_OperatingSystem;$ram=[math]::Round($os.TotalVisibleMemorySize/1024);$free=[math]::Round($os.FreePhysicalMemory/1024);""{\""Hardware\"":{\""CPU\"":\""$($cpu.Name)\"",\""RAM_GB\"":$([math]::Round($ram/1024,1)),\""FreeRAM_MB\"":$free,\""Manufacturer\"":\""$($hw.Manufacturer)\"",\""Model\"":\""$($hw.Model)\""}}"" ";
+            // Script PowerShell expandido: hardware completo para el panel de soporte
+            return @"
+try {
+  $hw  = Get-WmiObject Win32_ComputerSystem;
+  $cpu = Get-WmiObject Win32_Processor | Select-Object -First 1;
+  $os  = Get-WmiObject Win32_OperatingSystem;
+  $enc = Get-WmiObject Win32_SystemEnclosure;
+
+  # Tipo de dispositivo por ChassisType
+  $ct = if ($enc) { [int]($enc.ChassisTypes | Select-Object -First 1) } else { 0 };
+  $devType = switch ($ct) {
+    {$_ -in @(8,9,10,11,12,14,18,21)} { 'Laptop' }
+    {$_ -in @(30,31,32)} { 'Tablet' }
+    {$_ -in @(3,4,5,6,7,15,16)} { 'PC' }
+    default { 'PC' }
+  };
+
+  # RAM: total y módulos
+  $ramModules = Get-WmiObject Win32_PhysicalMemory | ForEach-Object {
+    $ddrMap = @{20='DDR';21='DDR2';24='DDR3';26='DDR4';34='DDR5';0='Unknown'};
+    $ddrType = if ($ddrMap.ContainsKey([int]$_.SMBIOSMemoryType)) { $ddrMap[[int]$_.SMBIOSMemoryType] } else { 'DDR' };
+    $capGB = [math]::Round($_.Capacity/1GB,0);
+    [PSCustomObject]@{ slot=$_.DeviceLocator; cap=$capGB; type=$ddrType; speed=$_.Speed }
+  };
+  $ramTotal = [math]::Round($os.TotalVisibleMemorySize/1KB,1);
+  $ramFree  = [math]::Round($os.FreePhysicalMemory/1KB,1);
+  $ramJson  = ($ramModules | ForEach-Object { '{""slot"":""{0}"",""gb"":{1},""type"":""{2}"",""speed"":{3}}' -f $_.slot,$_.cap,$_.type,$(if($_.speed){$_.speed}else{0}) }) -join ',';
+
+  # Discos
+  $disks = Get-WmiObject Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object {
+    $total = [math]::Round($_.Size/1GB,1);
+    $free  = [math]::Round($_.FreeSpace/1GB,1);
+    $used  = [math]::Round($total - $free,1);
+    [PSCustomObject]@{ letter=$_.DeviceID; total=$total; used=$used; free=$free }
+  };
+  $diskJson = ($disks | ForEach-Object { '{""drive"":""{0}"",""total"":{1},""used"":{2},""free"":{3}}' -f $_.letter,$_.total,$_.used,$_.free }) -join ',';
+
+  $out = '{""deviceType"":""{0}"",""manufacturer"":""{1}"",""model"":""{2}"",""cpu"":""{3}"",""ramGB"":{4},""ramFreeGB"":{5},""ramModules"":[{6}],""disks"":[{7}]}' -f `
+    $devType,
+    $hw.Manufacturer.Trim(),
+    $hw.Model.Trim(),
+    $cpu.Name.Trim(),
+    $ramTotal,
+    $ramFree,
+    $ramJson,
+    $diskJson;
+  $out
+} catch { '{""error"":""WMI_FAIL""}' }
+";
         }
 
         // =====================================================================

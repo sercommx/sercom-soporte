@@ -37,11 +37,36 @@
     }
 
     /* --- LOGIN SCREEN (GLASSMORPHISM) --- */
-    #login-screen {
+    /* Loader de sesión — visible mientras se verifica la cookie */
+    #session-loader {
       position: fixed;
       inset: 0;
       background: radial-gradient(circle at center, #111827 0%, #030712 100%);
       display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #session-loader .sl-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(99,179,237,0.2);
+      border-top-color: #63b3ed;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    #session-loader p {
+      color: rgba(255,255,255,0.4);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
@@ -202,6 +227,29 @@
       grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
       gap: 24px;
     }
+
+    /* --- HARDWARE INFO EN TARJETAS --- */
+    .agent-host { font-size: 15px; font-weight: 600; color: #e2e8f0; }
+    .hw-device-type { display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+      font-weight: 600; padding: 2px 8px; border-radius: 20px; background: rgba(99,179,237,0.12);
+      color: #63b3ed; border: 1px solid rgba(99,179,237,0.25); margin-top: 2px; width: fit-content; }
+    .hw-make-model { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .hw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .hw-block { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px; padding: 9px 12px; }
+    .hw-label { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px; }
+    .hw-value { font-size: 12px; color: #e2e8f0; font-weight: 500; line-height: 1.4; word-break: break-word; }
+    .hw-value small { font-size: 10px; color: var(--text-muted); }
+    .hw-disk-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .hw-disk-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
+    .hw-disk-bar { height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, #48bb78, #38a169); transition: width 0.5s ease; }
+    .hw-disk-bar.warn { background: linear-gradient(90deg, #ed8936, #dd6b20); }
+    .hw-disk-bar.crit { background: linear-gradient(90deg, #fc8181, #e53e3e); }
+    .hw-ram-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .hw-ram-pill { font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      background: rgba(159,122,234,0.15); color: #b794f4; border: 1px solid rgba(159,122,234,0.2); }
 
     /* --- ENTERPRISE AGENT CARD --- */
     .agent-card {
@@ -476,6 +524,12 @@
 </head>
 <body>
 
+<!-- LOADER DE SESIÓN (visible mientras se verifica la cookie) -->
+<div id="session-loader">
+  <div class="sl-spinner"></div>
+  <p>Verificando sesión...</p>
+</div>
+
 <!-- PANTALLA DE LOGIN -->
 <div id="login-screen">
   <div class="login-card">
@@ -566,6 +620,29 @@
   const canvas = document.getElementById('screen-canvas');
   const ctx = canvas.getContext('2d');
 
+  // ── Verificar sesión existente al cargar la página ────────────────────────
+  (async function checkExistingSession() {
+    const loader = document.getElementById('session-loader');
+    const loginScreen = document.getElementById('login-screen');
+    try {
+      const res = await fetch('/soporte/agentes', { credentials: 'include' });
+      if (res.ok) {
+        // Cookie válida — ir directo al panel sin mostrar login
+        authenticated = true;
+        loader.style.display = 'none';
+        startMonitoring();
+      } else {
+        // Sin sesión válida — mostrar login
+        loader.style.display = 'none';
+        loginScreen.style.display = 'flex';
+      }
+    } catch (e) {
+      // Error de red — mostrar login por si acaso
+      loader.style.display = 'none';
+      loginScreen.style.display = 'flex';
+    }
+  })();
+
   window.onloadTurnstileCallback = function() {
     if (window.turnstile) {
       turnstile.render('#my-turnstile-container', {
@@ -625,13 +702,14 @@
 
   function logout() {
     authenticated = false;
+    document.getElementById('session-loader').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
   }
 
   async function fetchAgents() {
     if (!authenticated) return;
     try {
-      const res = await fetch('/soporte/agentes');
+      const res = await fetch('/soporte/agentes', { credentials: 'include' });
       const agents = await res.json();
       renderGrid(agents);
     } catch {}
@@ -640,26 +718,90 @@
   function renderGrid(agents) {
     const grid = document.getElementById('agents-grid');
     grid.innerHTML = '';
-    
+
     if (Object.keys(agents).length === 0) {
       grid.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">Buscando agentes activos en la red de soporte...</div>';
       return;
     }
 
     for (const [id, info] of Object.entries(agents)) {
+      const h = info.health || {};
       const card = document.createElement('div');
       card.className = 'agent-card';
+
+      // ── Tipo de dispositivo ─────────────────────────────────────────────
+      const dtIcons = { Laptop: '💻', PC: '🖥️', Tablet: '📱', Celular: '📱' };
+      const dtIcon  = dtIcons[h.deviceType] || '🖥️';
+      const devTypeBadge = h.deviceType
+        ? `<div class="hw-device-type">${dtIcon} ${h.deviceType}</div>` : '';
+
+      // ── Fabricante y modelo ─────────────────────────────────────────────
+      const makeModel = (h.manufacturer && h.model)
+        ? `<div class="hw-make-model">${h.manufacturer} ${h.model}</div>` : '';
+
+      // ── CPU ─────────────────────────────────────────────────────────────
+      const cpuHtml = h.cpu
+        ? `<div class="hw-block"><div class="hw-label">⚙️ CPU</div>
+             <div class="hw-value">${h.cpu}</div></div>` : '';
+
+      // ── RAM módulos ─────────────────────────────────────────────────────
+      let ramHtml = '';
+      if (h.ramGB !== undefined) {
+        const ramUsed = h.ramGB && h.ramFreeGB ? (h.ramGB - h.ramFreeGB).toFixed(1) : '?';
+        const ramTotal = h.ramGB ? h.ramGB.toFixed(1) : '?';
+        let pillsHtml = '';
+        if (h.ramModules && h.ramModules.length > 0) {
+          pillsHtml = '<div class="hw-ram-pills">' +
+            h.ramModules.map(m =>
+              `<span class="hw-ram-pill">${m.gb}GB ${m.type}${m.speed ? ' '+m.speed+'MHz' : ''}</span>`
+            ).join('') + '</div>';
+        }
+        ramHtml = `<div class="hw-block"><div class="hw-label">🧠 RAM</div>
+          <div class="hw-value">${ramUsed} / ${ramTotal} GB usados</div>
+          ${pillsHtml}</div>`;
+      }
+
+      // ── Discos ──────────────────────────────────────────────────────────
+      let disksHtml = '';
+      if (h.disks && h.disks.length > 0) {
+        const diskItems = h.disks.map(d => {
+          const pct = d.total > 0 ? Math.round((d.used / d.total) * 100) : 0;
+          const barClass = pct >= 90 ? 'crit' : pct >= 75 ? 'warn' : '';
+          return `<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:#e2e8f0;margin-bottom:3px">
+              <span>${d.drive}</span>
+              <span>${d.free}GB libres de ${d.total}GB</span>
+            </div>
+            <div class="hw-disk-bar-wrap">
+              <div class="hw-disk-bar ${barClass}" style="width:${pct}%"></div>
+            </div></div>`;
+        }).join('');
+        disksHtml = `<div class="hw-block" style="grid-column:1/-1">
+          <div class="hw-label">💾 Almacenamiento</div>${diskItems}</div>`;
+      }
+
+      // ── Badges sistema ──────────────────────────────────────────────────
+      const badgeRow = `<div class="system-badge-row">
+        <span class="sys-badge">OS: Windows</span>
+        <span class="sys-badge">HTTPS</span>
+      </div>`;
+
+      const hwSection = (cpuHtml || ramHtml || disksHtml)
+        ? `<div class="hw-grid">${cpuHtml}${ramHtml}${disksHtml}</div>` : '';
+
       card.innerHTML = `
         <div class="agent-card-header">
           <span class="agent-id-tag">${id}</span>
           <div class="pulse-indicator"></div>
         </div>
-        <div class="agent-host">${info.hostname || 'Terminal Desconectada'}</div>
-        <div class="card-divider"></div>
-        <div class="system-badge-row">
-          <span class="sys-badge">OS: Windows</span>
-          <span class="sys-badge">HTTPS</span>
+        <div>
+          <div class="agent-host">${info.hostname || 'Terminal Desconectada'}</div>
+          ${devTypeBadge}
+          ${makeModel}
         </div>
+        <div class="card-divider"></div>
+        ${hwSection || badgeRow}
+        ${hwSection ? badgeRow : ''}
         <div class="card-actions">
           <button class="btn-action primary" onclick="takeControl('${id}')">🖥️ Control Remoto</button>
         </div>
