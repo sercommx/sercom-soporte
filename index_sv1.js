@@ -1151,7 +1151,7 @@ Estoy aquí para ayudarte a optimizar, gestionar y auditar tus sistemas. Estas s
             const lowerCmd = cmdText.trim().toLowerCase();
             if (guiApps.some(app => lowerCmd === app || lowerCmd.startsWith(app + ' '))) {
               // Envolver en Start-Process de PowerShell para que retorne al instante y no sea bloqueante
-              parsedCmdText = 'Start-Process ${cmdText}`;
+              parsedCmdText = `Start-Process ${cmdText}`;
             }
 
             const cmdId = "cmd_" + Date.now();
