@@ -448,12 +448,12 @@ Si te piden verificar si un dominio está libre o cotizarlo, puedes validar disp
 
 [HERRAMIENTAS DE SOPORTE REMOTO (CRÍTICO)]:
 Si el usuario/técnico te pide realizar una acción en el equipo de un cliente bajo soporte remoto (como por ejemplo: 'cierra el proceso de msinfo32 y la calculadora', 'abre el Word', 'lista los procesos', etc.) y proporciona un ID de soporte de 8 dígitos (ej. 8637-3427), tu deber es ejecutarlo o indicarle el comando exacto de WhatsApp que el técnico debe escribir para enviarlo a la máquina.
-El formato para inyectar comandos de PowerShell a la máquina remota es: `.alex soporte cmd [ID] [comando_powershell]`
+El formato para inyectar comandos de PowerShell a la máquina remota es: '.alex soporte cmd [ID] [comando_powershell]'
 Ejemplos de comandos útiles:
-* Abrir calculadora: `.alex soporte cmd [ID] Start-Process calc`
-* Abrir Word: `.alex soporte cmd [ID] Start-Process winword`
-* Cerrar procesos (ej. msinfo32 y calculadora): `.alex soporte cmd [ID] Stop-Process -Name msinfo32,calc -Force`
-* Obtener procesos activos: `.alex soporte cmd [ID] Get-Process`
+* Abrir calculadora: '.alex soporte cmd [ID] Start-Process calc'
+* Abrir Word: '.alex soporte cmd [ID] Start-Process winword'
+* Cerrar procesos (ej. msinfo32 y calculadora): '.alex soporte cmd [ID] Stop-Process -Name msinfo32,calc -Force'
+* Obtener procesos activos: '.alex soporte cmd [ID] Get-Process'
 Responde indicándole al técnico que ejecute el comando en el chat (o bien indícale el comando directamente) para que el agente del cliente lo procese.
 
 [CONTEXTO LOCAL]:
@@ -602,12 +602,12 @@ Si te piden verificar si un dominio está libre o cotizarlo, puedes validar disp
 
 [HERRAMIENTAS DE SOPORTE REMOTO (CRÍTICO)]:
 Si el usuario/técnico te pide realizar una acción en el equipo de un cliente bajo soporte remoto (como por ejemplo: 'cierra el proceso de msinfo32 y la calculadora', 'abre el Word', 'lista los procesos', etc.) y proporciona un ID de soporte de 8 dígitos (ej. 8637-3427), tu deber es ejecutarlo o indicarle el comando exacto de WhatsApp que el técnico debe escribir para enviarlo a la máquina.
-El formato para inyectar comandos de PowerShell a la máquina remota es: `.alex soporte cmd [ID] [comando_powershell]`
+El formato para inyectar comandos de PowerShell a la máquina remota es: '.alex soporte cmd [ID] [comando_powershell]'
 Ejemplos de comandos útiles:
-* Abrir calculadora: `.alex soporte cmd [ID] Start-Process calc`
-* Abrir Word: `.alex soporte cmd [ID] Start-Process winword`
-* Cerrar procesos (ej. msinfo32 y calculadora): `.alex soporte cmd [ID] Stop-Process -Name msinfo32,calc -Force`
-* Obtener procesos activos: `.alex soporte cmd [ID] Get-Process`
+* Abrir calculadora: '.alex soporte cmd [ID] Start-Process calc'
+* Abrir Word: '.alex soporte cmd [ID] Start-Process winword'
+* Cerrar procesos (ej. msinfo32 y calculadora): '.alex soporte cmd [ID] Stop-Process -Name msinfo32,calc -Force'
+* Obtener procesos activos: '.alex soporte cmd [ID] Get-Process'
 Responde indicándole al técnico que ejecute el comando en el chat (o bien indícale el comando directamente) para que el agente del cliente lo procese.
 
 [CONTEXTO LOCAL]:
@@ -1166,7 +1166,7 @@ Estoy aquí para ayudarte a optimizar, gestionar y auditar tus sistemas. Estas s
             // Encolar comando
             activeSupportSessions[id].queue.push({ id: cmdId, text: parsedCmdText });
 
-            // Polling de respuesta en memoria (máximo 8 segundos, reduciendo intervalo para respuestas veloces)
+            // Polling de respuesta en memoria (máximo 8 segundos)
             let attempts = 0;
             const interval = setInterval(async () => {
               attempts++;
@@ -1175,11 +1175,11 @@ Estoy aquí para ayudarte a optimizar, gestionar y auditar tus sistemas. Estas s
                 clearInterval(interval);
                 await sock.sendMessage(jid, { text: `💻 *Resultado del comando (ID ${id}):*\n\`\`\`\n${res.output || '[Comando ejecutado sin salida]'}\n\`\`\`` });
                 delete activeSupportSessions[id].results[cmdId]; // Limpiar memoria
-              } else if (attempts >= 16) {
+              } else if (attempts >= 40) {
                 clearInterval(interval);
                 await sock.sendMessage(jid, { text: `⏳ *Comando en proceso:* El comando tomó más de 8 segundos. Se sigue ejecutando en segundo plano en la máquina del cliente.` });
               }
-            }, 300);
+            }, 200);
             
           } else {
             await sock.sendMessage(jid, { text: "⏳ Buscando conexiones de soporte remoto activas en el servidor..." });
