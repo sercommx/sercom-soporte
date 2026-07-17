@@ -521,7 +521,7 @@
   let turnstileToken = null;
   let activeWs = null;
   let currentAgentId = null;
-  const WS_RELAY_URL = window.location.protocol === 'https:' ? `wss://${window.location.hostname}:6002` : `ws://${window.location.hostname}:6002`;
+  const WS_RELAY_URL = window.location.protocol === 'https:' ? `wss://${window.location.host}` : `ws://${window.location.hostname}:6001`;
 
   const canvas = document.getElementById('screen-canvas');
   const ctx = canvas.getContext('2d');
@@ -677,7 +677,15 @@
   }
 
   function startStream() {
-    if (activeWs) activeWs.send(JSON.stringify({ type: 'start_stream' }));
+    if (activeWs) {
+      if (activeWs.readyState === WebSocket.OPEN) {
+        activeWs.send(JSON.stringify({ type: 'start_stream' }));
+      } else if (activeWs.readyState === WebSocket.CONNECTING) {
+        activeWs.addEventListener('open', () => {
+          activeWs.send(JSON.stringify({ type: 'start_stream' }));
+        });
+      }
+    }
   }
 
   function requestElevation() {
