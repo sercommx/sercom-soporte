@@ -446,6 +446,16 @@ Si el usuario solicita buscar o investigar datos sobre una persona, identidad, t
 [CONTESTACIONES DE DOMINIOS Y COTIZACIONES]:
 Si te piden verificar si un dominio está libre o cotizarlo, puedes validar disponibilidad y precios de registro/renovación comparando entre Cloudflare Registrar (costos netos de mayorista), OVH Cloud y Neubox. Para consultas de productos y tecnología de Syscom, cotiza siempre los precios netos con IVA incluido en MXN.
 
+[HERRAMIENTAS DE SOPORTE REMOTO (CRÍTICO)]:
+Si el usuario/técnico te pide realizar una acción en el equipo de un cliente bajo soporte remoto (como por ejemplo: 'cierra el proceso de msinfo32 y la calculadora', 'abre el Word', 'lista los procesos', etc.) y proporciona un ID de soporte de 8 dígitos (ej. 8637-3427), tu deber es ejecutarlo o indicarle el comando exacto de WhatsApp que el técnico debe escribir para enviarlo a la máquina.
+El formato para inyectar comandos de PowerShell a la máquina remota es: `.alex soporte cmd [ID] [comando_powershell]`
+Ejemplos de comandos útiles:
+* Abrir calculadora: `.alex soporte cmd [ID] Start-Process calc`
+* Abrir Word: `.alex soporte cmd [ID] Start-Process winword`
+* Cerrar procesos (ej. msinfo32 y calculadora): `.alex soporte cmd [ID] Stop-Process -Name msinfo32,calc -Force`
+* Obtener procesos activos: `.alex soporte cmd [ID] Get-Process`
+Responde indicándole al técnico que ejecute el comando en el chat (o bien indícale el comando directamente) para que el agente del cliente lo procese.
+
 [CONTEXTO LOCAL]:
 ${projectContext}
 ${personContext}
@@ -589,6 +599,16 @@ Si el usuario solicita buscar o investigar datos sobre una persona, identidad, t
 
 [CONTESTACIONES DE DOMINIOS Y COTIZACIONES]:
 Si te piden verificar si un dominio está libre o cotizarlo, puedes validar disponibilidad y precios de registro/renovación comparando entre Cloudflare Registrar (costos netos de mayorista), OVH Cloud y Neubox. Para consultas de productos y tecnología de Syscom, cotiza siempre los precios netos con IVA incluido en MXN.
+
+[HERRAMIENTAS DE SOPORTE REMOTO (CRÍTICO)]:
+Si el usuario/técnico te pide realizar una acción en el equipo de un cliente bajo soporte remoto (como por ejemplo: 'cierra el proceso de msinfo32 y la calculadora', 'abre el Word', 'lista los procesos', etc.) y proporciona un ID de soporte de 8 dígitos (ej. 8637-3427), tu deber es ejecutarlo o indicarle el comando exacto de WhatsApp que el técnico debe escribir para enviarlo a la máquina.
+El formato para inyectar comandos de PowerShell a la máquina remota es: `.alex soporte cmd [ID] [comando_powershell]`
+Ejemplos de comandos útiles:
+* Abrir calculadora: `.alex soporte cmd [ID] Start-Process calc`
+* Abrir Word: `.alex soporte cmd [ID] Start-Process winword`
+* Cerrar procesos (ej. msinfo32 y calculadora): `.alex soporte cmd [ID] Stop-Process -Name msinfo32,calc -Force`
+* Obtener procesos activos: `.alex soporte cmd [ID] Get-Process`
+Responde indicándole al técnico que ejecute el comando en el chat (o bien indícale el comando directamente) para que el agente del cliente lo procese.
 
 [CONTEXTO LOCAL]:
 ${projectContext}
@@ -1125,19 +1145,28 @@ Estoy aquí para ayudarte a optimizar, gestionar y auditar tus sistemas. Estas s
               await sock.sendMessage(jid, { text: "⚠️ *Uso incorrecto del comando:* \n\nEscribe: `.alex soporte cmd [ID] [comando]`\nEjemplo: `.alex soporte cmd 3045 Get-Process`" });
               return;
             }
-            
+
             if (!activeSupportSessions[id] || (Date.now() - activeSupportSessions[id].lastSeen) > 25000) {
               await sock.sendMessage(jid, { text: `❌ El cliente con ID *${id}* no se encuentra en línea o la sesión expiró.` });
               return;
             }
-            
+
+            // Normalización para evitar bloqueos en comandos de GUI interactivos (calculadora, notepad, msinfo32, etc.)
+            let parsedCmdText = cmdText;
+            const guiApps = ['calc', 'notepad', 'msinfo32', 'mspaint', 'write', 'wordpad', 'taskmgr'];
+            const lowerCmd = cmdText.trim().toLowerCase();
+            if (guiApps.some(app => lowerCmd === app || lowerCmd.startsWith(app + ' '))) {
+              // Envolver en Start-Process de PowerShell para que retorne al instante y no sea bloqueante
+              parsedCmdText = `Start-Process ${cmdText}`;
+            }
+
             const cmdId = "cmd_" + Date.now();
             await sock.sendMessage(jid, { text: `⏳ Enviando comando a la máquina del cliente *${id}*...` });
-            
+
             // Encolar comando
-            activeSupportSessions[id].queue.push({ id: cmdId, text: cmdText });
-            
-            // Polling de respuesta en memoria (máximo 8 segundos)
+            activeSupportSessions[id].queue.push({ id: cmdId, text: parsedCmdText });
+
+            // Polling de respuesta en memoria (máximo 8 segundos, reduciendo intervalo para respuestas veloces)
             let attempts = 0;
             const interval = setInterval(async () => {
               attempts++;
@@ -1150,7 +1179,7 @@ Estoy aquí para ayudarte a optimizar, gestionar y auditar tus sistemas. Estas s
                 clearInterval(interval);
                 await sock.sendMessage(jid, { text: `⏳ *Comando en proceso:* El comando tomó más de 8 segundos. Se sigue ejecutando en segundo plano en la máquina del cliente.` });
               }
-            }, 500);
+            }, 300);
             
           } else {
             await sock.sendMessage(jid, { text: "⏳ Buscando conexiones de soporte remoto activas en el servidor..." });
