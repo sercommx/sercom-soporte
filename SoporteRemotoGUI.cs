@@ -859,51 +859,58 @@ namespace SercomSoporte
             // Script PowerShell expandido: hardware completo para el panel de soporte
             return @"
 try {
-  $hw  = Get-WmiObject Win32_ComputerSystem;
-  $cpu = Get-WmiObject Win32_Processor | Select-Object -First 1;
-  $os  = Get-WmiObject Win32_OperatingSystem;
-  $enc = Get-WmiObject Win32_SystemEnclosure;
+  $manufacturer = ""Desconocido""; $model = ""Desconocido"";
+  try { $hw = Get-WmiObject Win32_ComputerSystem; $manufacturer = $hw.Manufacturer.Trim(); $model = $hw.Model.Trim(); } catch {}
 
-  # Tipo de dispositivo por ChassisType
-  $ct = if ($enc) { [int]($enc.ChassisTypes | Select-Object -First 1) } else { 0 };
-  $devType = switch ($ct) {
-    {$_ -in @(8,9,10,11,12,14,18,21)} { 'Laptop' }
-    {$_ -in @(30,31,32)} { 'Tablet' }
-    {$_ -in @(3,4,5,6,7,15,16)} { 'PC' }
-    default { 'PC' }
-  };
+  $cpuName = ""Desconocido"";
+  try { $cpu = Get-WmiObject Win32_Processor | Select-Object -First 1; $cpuName = $cpu.Name.Trim(); } catch {}
 
-  # RAM: total y módulos
-  $ramModules = Get-WmiObject Win32_PhysicalMemory | ForEach-Object {
-    $ddrMap = @{20='DDR';21='DDR2';24='DDR3';26='DDR4';34='DDR5';0='Unknown'};
-    $ddrType = if ($ddrMap.ContainsKey([int]$_.SMBIOSMemoryType)) { $ddrMap[[int]$_.SMBIOSMemoryType] } else { 'DDR' };
-    $capGB = [math]::Round($_.Capacity/1GB,0);
-    [PSCustomObject]@{ slot=$_.DeviceLocator; cap=$capGB; type=$ddrType; speed=$_.Speed }
-  };
-  $ramTotal = [math]::Round($os.TotalVisibleMemorySize/1KB,1);
-  $ramFree  = [math]::Round($os.FreePhysicalMemory/1KB,1);
-  $ramJson  = ($ramModules | ForEach-Object { '{""slot"":""{0}"",""gb"":{1},""type"":""{2}"",""speed"":{3}}' -f $_.slot,$_.cap,$_.type,$(if($_.speed){$_.speed}else{0}) }) -join ',';
+  $devType = ""PC"";
+  try {
+    $enc = Get-WmiObject Win32_SystemEnclosure;
+    if ($enc) {
+      $ct = [int]($enc.ChassisTypes | Select-Object -First 1);
+      $devType = switch ($ct) {
+        {$_ -in @(8,9,10,11,12,14,18,21)} { ""Laptop"" }
+        {$_ -in @(30,31,32)} { ""Tablet"" }
+        {$_ -in @(3,4,5,6,7,15,16)} { ""PC"" }
+        default { ""PC"" }
+      };
+    }
+  } catch {}
 
-  # Discos
-  $disks = Get-WmiObject Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object {
-    $total = [math]::Round($_.Size/1GB,1);
-    $free  = [math]::Round($_.FreeSpace/1GB,1);
-    $used  = [math]::Round($total - $free,1);
-    [PSCustomObject]@{ letter=$_.DeviceID; total=$total; used=$used; free=$free }
-  };
-  $diskJson = ($disks | ForEach-Object { '{""drive"":""{0}"",""total"":{1},""used"":{2},""free"":{3}}' -f $_.letter,$_.total,$_.used,$_.free }) -join ',';
+  $ramTotal = 0; $ramFree = 0;
+  try {
+    $os = Get-WmiObject Win32_OperatingSystem;
+    $ramTotal = [math]::Round($os.TotalVisibleMemorySize/1024/1024,1);
+    $ramFree  = [math]::Round($os.FreePhysicalMemory/1024/1024,1);
+  } catch {}
 
-  $out = '{""deviceType"":""{0}"",""manufacturer"":""{1}"",""model"":""{2}"",""cpu"":""{3}"",""ramGB"":{4},""ramFreeGB"":{5},""ramModules"":[{6}],""disks"":[{7}]}' -f `
-    $devType,
-    $hw.Manufacturer.Trim(),
-    $hw.Model.Trim(),
-    $cpu.Name.Trim(),
-    $ramTotal,
-    $ramFree,
-    $ramJson,
-    $diskJson;
-  $out
-} catch { '{""error"":""WMI_FAIL""}' }
+  $ramJson = """";
+  try {
+    $ramModules = Get-WmiObject Win32_PhysicalMemory | ForEach-Object {
+      $ddrMap = @{20='DDR';21='DDR2';24='DDR3';26='DDR4';34='DDR5';0='Unknown'};
+      $ddrType = if ($ddrMap.ContainsKey([int]$_.SMBIOSMemoryType)) { $ddrMap[[int]$_.SMBIOSMemoryType] } else { 'DDR' };
+      $capGB = [math]::Round($_.Capacity/1GB,0);
+      $speed = if ($_.Speed) { $_.Speed } else { 0 };
+      '{""slot"":""' + $_.DeviceLocator + '"",""gb"":' + $capGB + ',""type"":""' + $ddrType + '"",""speed"":' + $speed + '}'
+    };
+    $ramJson = $ramModules -join ',';
+  } catch {}
+
+  $diskJson = """";
+  try {
+    $disks = Get-WmiObject Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object {
+      $total = [math]::Round($_.Size/1GB,1);
+      $free  = [math]::Round($_.FreeSpace/1GB,1);
+      $used  = [math]::Round($total - $free,1);
+      '{""drive"":""' + $_.DeviceID + '"",""total"":' + $total + ',""used"":' + $used + ',""free"":' + $free + '}'
+    };
+    $diskJson = $disks -join ',';
+  } catch {}
+
+  '{""deviceType"":""' + $devType + '"",""manufacturer"":""' + $manufacturer + '"",""model"":""' + $model + '"",""cpu"":""' + $cpuName + '"",""ramGB"":' + $ramTotal + ',""ramFreeGB"":' + $ramFree + ',""ramModules"":[' + $ramJson + '],""disks"":[' + $diskJson + ']}'
+} catch { '{""error"":""WMI_EXCEPTION"",""details"":""' + $_.Exception.Message + '""}' }
 ";
         }
 
