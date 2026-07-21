@@ -43,7 +43,7 @@ namespace SercomSoporte
         private const string ServerUrl   = "https://soporte.sercommx.com";
         private const string RelayWsUrl  = "wss://soporte.sercommx.com";
         private const string AgentToken  = "SercomAgentToken2026SecureHashKey";
-        private const string AppVersion  = "##AGENT_VERSION##"; // inyectado por el servidor al descargar
+        private const string AppVersion  = "v4.0.0"; // inyectado por el servidor al descargar
 
         // ── Recursos gráficos inyectados en caliente por Express ─────────────
         private static readonly string LogoBase64 = "";
