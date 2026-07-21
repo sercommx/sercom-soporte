@@ -118,9 +118,14 @@ function parseQuery(rawUrl) {
  *
  * @type {WebSocketServer}
  */
-const wss = new WebSocketServer({ port: 6002 });
-
-log('🟢 Relay WebSocket escuchando en ws://0.0.0.0:6002');
+let wss;
+if (process.env.INSTANCE === 'clon') {
+  wss = new WebSocketServer({ noServer: true });
+  log('🟢 Instancia de clon detectada: Servidor WebSocket independiente de soporte desactivado (noServer: true)');
+} else {
+  wss = new WebSocketServer({ port: 6002 });
+  log('🟢 Relay WebSocket escuchando en ws://0.0.0.0:6002');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GESTIÓN DE CONEXIONES
@@ -399,3 +404,15 @@ function startRelayServer(httpServer) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { wss, agentSessions, startRelayServer };
+
+
+// Ping/Pong Keep-Alive automático cada 20s para evitar cierres por timeout (Cloudflare 1006)
+setInterval(() => {
+  if (wss && wss.clients) {
+    wss.clients.forEach(ws => {
+      if (ws.readyState === 1) {
+        try { ws.ping(); } catch {}
+      }
+    });
+  }
+}, 20000);

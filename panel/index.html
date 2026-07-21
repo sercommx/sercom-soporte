@@ -827,6 +827,7 @@
 
     const wsUrl = `${WS_RELAY_URL}?type=panel&id=${id}&panel_key=${encodeURIComponent('SrC0mS0p0rt3#S3cur1tyKey#2026')}`;
     activeWs = new WebSocket(wsUrl);
+    activeWs.binaryType = 'arraybuffer';
 
     activeWs.onopen = () => {
       statusText.innerHTML = `Conexión establecida. Solicitando flujo de video...`;
@@ -848,6 +849,38 @@
     };
 
     activeWs.onmessage = (e) => {
+      if (e.data instanceof ArrayBuffer) {
+        if (overlay.style.display !== 'none') {
+          overlay.style.opacity = '0';
+          setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        }
+        try {
+          const dv = new DataView(e.data);
+          const col   = dv.getUint16(2);
+          const row   = dv.getUint16(4);
+          const cellW = dv.getUint16(6);
+          const cellH = dv.getUint16(8);
+          const x     = dv.getUint16(10);
+          const y     = dv.getUint16(12);
+          const sw    = dv.getUint16(14);
+          const sh    = dv.getUint16(16);
+
+          if (canvas.width !== sw || canvas.height !== sh) {
+            canvas.width = sw;
+            canvas.height = sh;
+          }
+
+          const blob = new Blob([e.data.slice(18)], { type: 'image/jpeg' });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, x, y, cellW, cellH);
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        } catch (err) {}
+        return;
+      }
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
       if (msg.type === 'frame') {

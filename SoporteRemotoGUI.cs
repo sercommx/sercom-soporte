@@ -40,8 +40,8 @@ namespace SercomSoporte
     public class SoporteRemotoGUI : Form
     {
         // ── Configuración del servidor ───────────────────────────────────────
-        private const string ServerUrl   = "http://129.159.72.206:6001";
-        private const string RelayWsUrl  = "ws://129.159.72.206:6002";
+        private const string ServerUrl   = "https://soporte.sercommx.com";
+        private const string RelayWsUrl  = "wss://soporte.sercommx.com";
         private const string AgentToken  = "SercomAgentToken2026SecureHashKey";
         private const string AppVersion  = "##AGENT_VERSION##"; // inyectado por el servidor al descargar
 
@@ -473,6 +473,7 @@ namespace SercomSoporte
             int cellH  = screen.Height / _gridRows;
             _prevScreenBitmap = new Bitmap(screen.Width, screen.Height, PixelFormat.Format24bppRgb);
 
+            bool isFirstFrame = true;
             while (!ct.IsCancellationRequested && _wsClient != null && _wsClient.State == WebSocketState.Open)
             {
                 try
@@ -490,7 +491,7 @@ namespace SercomSoporte
                                 int w = (col == _gridCols - 1) ? screen.Width  - x : cellW;
                                 int h = (row == _gridRows - 1) ? screen.Height - y : cellH;
 
-                                if (!IsCellDirty(current, _prevScreenBitmap, x, y, w, h)) continue;
+                                if (!isFirstFrame && !IsCellDirty(current, _prevScreenBitmap, x, y, w, h)) continue;
 
                                 using (Bitmap cell = new Bitmap(w, h, PixelFormat.Format24bppRgb))
                                 using (Graphics gc = Graphics.FromImage(cell))
@@ -514,7 +515,8 @@ namespace SercomSoporte
                             }
                         }
 
-                        using (Graphics gPrev = Graphics.FromImage(_prevScreenBitmap))
+                        isFirstFrame = false;
+                    using (Graphics gPrev = Graphics.FromImage(_prevScreenBitmap))
                             gPrev.DrawImage(current, 0, 0);
                     }
                     await Task.Delay(66, ct);
@@ -552,6 +554,7 @@ namespace SercomSoporte
             byte[] buffer = new byte[4096];
             var sb = new StringBuilder();
 
+            bool isFirstFrame = true;
             while (!ct.IsCancellationRequested && _wsClient != null && _wsClient.State == WebSocketState.Open)
             {
                 try
