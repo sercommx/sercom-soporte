@@ -211,7 +211,14 @@ function handleAgent(ws, request, id) {
   }
 
   // ── Recepción de mensajes del agente ─────────────────────────────────────
-  ws.on('message', (raw) => {
+  ws.on('message', (raw, isBinary) => {
+    const session = agentSessions.get(id);
+    if (session && session.panel && session.panel.readyState === 1) {
+      if (isBinary || (Buffer.isBuffer(raw) && raw[0] !== 123)) {
+        session.panel.send(raw, { binary: true });
+        return;
+      }
+    }
     let msg;
     try {
       msg = JSON.parse(raw.toString());
@@ -220,7 +227,6 @@ function handleAgent(ws, request, id) {
       return;
     }
 
-    const session = agentSessions.get(id);
     if (!session) return;
 
     if (!AGENT_TO_PANEL_TYPES.has(msg.type)) {
@@ -238,7 +244,6 @@ function handleAgent(ws, request, id) {
   ws.on('close', (code, reason) => {
     log(`🔌 Agente desconectado  id=${id}  code=${code}  reason=${reason.toString()}`);
 
-    const session = agentSessions.get(id);
     if (session) {
       // Notificar al panel vinculado
       if (session.panel && session.panel.readyState === WebSocket.OPEN) {
@@ -280,7 +285,6 @@ function handlePanel(ws, request, id) {
 
   // ── Vincular panel con la sesión del agente ───────────────────────────────
   const session = agentSessions.get(id);
-
   if (session) {
     // Desvincula panel anterior si existía
     if (session.panel && session.panel.readyState === WebSocket.OPEN) {
