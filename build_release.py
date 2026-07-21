@@ -1,3 +1,4 @@
+import base64
 #!/usr/bin/env python3
 import sys
 import os
@@ -31,6 +32,18 @@ def main():
         f'private const string AppVersion  = "{version}";',
         code
     )
+
+    
+    # Inyectar logotipo en base64 si existe
+    logo_file = os.path.join(repo_dir, "logo-texto-blanco.png")
+    if os.path.exists(logo_file):
+        with open(logo_file, "rb") as lf:
+            logo_b64 = base64.b64encode(lf.read()).decode("utf-8")
+            code = re.sub(
+                r'private static readonly string LogoBase64\s*=\s*"[^"]*";',
+                f'private static readonly string LogoBase64 = "{logo_b64}";',
+                code
+            )
 
     with open(cs_file, "w", encoding="utf-8") as f:
         f.write(code)
