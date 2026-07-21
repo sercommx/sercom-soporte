@@ -45,13 +45,25 @@ def main():
                 code
             )
 
+    
+    # Inyectar ícono en base64 si existe
+    ico_file = os.path.join(repo_dir, "favicon.ico")
+    if os.path.exists(ico_file):
+        with open(ico_file, "rb") as icf:
+            ico_b64 = base64.b64encode(icf.read()).decode("utf-8")
+            code = re.sub(
+                r'private static readonly string IconBase64\s*=\s*"[^"]*";',
+                f'private static readonly string IconBase64 = "{ico_b64}";',
+                code
+            )
+
     with open(cs_file, "w", encoding="utf-8") as f:
         f.write(code)
 
     print(f"✅ Versión {version} inyectada en SoporteRemotoGUI.cs")
 
     # 2. Compilar ejecutable .exe nativo con mcs
-    cmd_compile = f"mcs /target:winexe /out:{exe_file} /r:System.Windows.Forms.dll,System.Drawing.dll,System.dll,System.Core.dll {cs_file}"
+    cmd_compile = f"mcs /target:winexe /win32icon:{ico_file} /out:{exe_file} /r:System.Windows.Forms.dll,System.Drawing.dll,System.dll,System.Core.dll {cs_file}"
     res = subprocess.run(cmd_compile, shell=True, capture_output=True, text=True)
     if res.returncode != 0:
         print(f"❌ Error de compilación:\n{res.stderr}")
