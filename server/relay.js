@@ -243,6 +243,7 @@ function handleAgent(ws, request, id) {
   // ── Desconexión del agente ────────────────────────────────────────────────
   ws.on('close', (code, reason) => {
     log(`🔌 Agente desconectado  id=${id}  code=${code}  reason=${reason.toString()}`);
+    const session = agentSessions.get(id);
 
     if (session) {
       // Notificar al panel vinculado
